@@ -126,13 +126,21 @@
   /* Hero Button Variants */
   .btn-hero {
     @apply bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-3 rounded-lg;
-    @apply transition-all duration-300 hover:shadow-glow hover:scale-105;
+    @apply transition-all duration-300 hover:scale-105;
     background: var(--gradient-primary);
+  }
+  
+  .btn-hero:hover {
+    box-shadow: var(--shadow-glow);
   }
   
   .btn-outline-hero {
     @apply border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground;
-    @apply font-semibold px-8 py-3 rounded-lg transition-all duration-300 hover:shadow-glow;
+    @apply font-semibold px-8 py-3 rounded-lg transition-all duration-300;
+  }
+  
+  .btn-outline-hero:hover {
+    box-shadow: var(--shadow-glow);
   }
   
   /* Card Variants */
@@ -144,7 +152,11 @@
   }
   
   .card-hover {
-    @apply card-modern transition-all duration-300 hover:scale-105 hover:shadow-glow;
+    @apply card-modern transition-all duration-300 hover:scale-105;
+  }
+  
+  .card-hover:hover {
+    box-shadow: var(--shadow-glow);
   }
   
   /* Event Card Special */
