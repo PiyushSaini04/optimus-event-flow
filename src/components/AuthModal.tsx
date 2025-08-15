@@ -9,7 +9,7 @@ import { User, Mail, Lock, Phone, Building } from "lucide-react";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAuth: (userData: { name: string; avatar: string; role: string }) => void;
+  onAuth: (userData: { name: string; avatar: string; email: string; role: string }) => void;
 }
 
 const AuthModal = ({ isOpen, onClose, onAuth }: AuthModalProps) => {
@@ -28,6 +28,7 @@ const AuthModal = ({ isOpen, onClose, onAuth }: AuthModalProps) => {
     onAuth({
       name: formData.name || "John Doe",
       avatar: "/placeholder.svg",
+      email: formData.email || "john@example.com",
       role: formData.role
     });
   };

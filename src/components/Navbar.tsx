@@ -1,17 +1,20 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User, LogIn, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "./ThemeToggle";
 import AuthModal from "./AuthModal";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState({ name: "John Doe", avatar: "/placeholder.svg" });
+  const [user, setUser] = useState({ name: "John Doe", avatar: "/placeholder.svg", email: "john@example.com" });
   const location = useLocation();
+  const navigate = useNavigate();
 
   const navItems = [
     { name: "Home", path: "/" },
@@ -71,14 +74,35 @@ const Navbar = () => {
                 </div>
               )}
               
+              <ThemeToggle />
+              
               {isLoggedIn ? (
-                <div className="flex items-center space-x-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">{user.name}</span>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuItem className="flex flex-col items-start">
+                      <div className="font-medium">{user.name}</div>
+                      <div className="text-sm text-muted-foreground">{user.email}</div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <User className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsLoggedIn(false)}>
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 <Button onClick={() => setIsAuthOpen(true)} className="btn-hero">
                   <LogIn className="h-4 w-4 mr-2" />
@@ -119,14 +143,30 @@ const Navbar = () => {
                   {item.name}
                 </Link>
               ))}
-              <div className="pt-4 pb-2">
+              <div className="pt-4 pb-2 space-y-2">
+                <div className="px-3">
+                  <ThemeToggle />
+                </div>
                 {isLoggedIn ? (
-                  <div className="flex items-center space-x-3 px-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{user.name}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-3 px-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">{user.name}</span>
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        navigate('/dashboard');
+                        setIsOpen(false);
+                      }} 
+                      variant="outline"
+                      className="w-full mx-3"
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Button>
                   </div>
                 ) : (
                   <Button 
