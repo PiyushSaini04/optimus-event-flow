@@ -8,6 +8,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import EventHub from "./pages/EventHub";
+import EventDetail from "./pages/EventDetail";
 import CreateEvent from "./pages/CreateEvent";
 import Dashboard from "./pages/Dashboard";
 import Posts from "./pages/Posts";
@@ -31,6 +32,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/events" element={<EventHub />} />
+                <Route path="/events/:id" element={<EventDetail />} />
                 <Route path="/create-event" element={<CreateEvent />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/posts" element={<Posts />} />

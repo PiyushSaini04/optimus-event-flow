@@ -1,22 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search, Filter, Calendar, Users, MapPin, Clock, Tag, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Event {
+  id: string;
+  title: string;
+  description: string;
+  event_date: string;
+  price: number;
+  max_participants: number;
+  image_url: string;
+  created_by: string;
+  profiles?: {
+    name: string;
+  } | null;
+}
 
 const EventHub = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date");
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [registrationCounts, setRegistrationCounts] = useState<{ [key: string]: number }>({});
 
-  const stats = [
-    { label: "Total Events", value: "4", icon: Calendar },
-    { label: "Active Participants", value: "294", icon: Users },
-    { label: "Free Events", value: "1", icon: Tag },
-    { label: "Categories", value: "4", icon: Filter }
-  ];
+  const [stats, setStats] = useState([
+    { label: "Total Events", value: "0", icon: Calendar },
+    { label: "Active Participants", value: "0", icon: Users },
+    { label: "Free Events", value: "0", icon: Tag },
+    { label: "Categories", value: "0", icon: Filter }
+  ]);
 
   const filters = [
     { id: "all", label: "All Events" },
@@ -26,72 +49,117 @@ const EventHub = () => {
     { id: "tech-talk", label: "Tech Talk" }
   ];
 
-  const events = [
-    {
-      id: 1,
-      title: "AI/ML Workshop 2024",
-      description: "Hands-on AI/ML workshop with real-world applications and Machine Learning.",
-      category: "Workshop",
-      date: "SEP 15",
-      time: "10:00 AM",
-      location: "Computer Lab 1",
-      participants: 50,
-      maxParticipants: 50,
-      organizer: "Dr. Sarah Chen",
-      price: null,
-      status: "Open",
-      image: "/placeholder.svg",
-      tags: ["AI", "Machine Learning", "Python"]
-    },
-    {
-      id: 2,
-      title: "Tech Talk: Future of Robotics",
-      description: "Expert insights into robotics and autonomous systems development.",
-      category: "Tech Talk",
-      date: "SEP 28",
-      time: "2:00 PM",
-      location: "Main Auditorium",
-      participants: 120,
-      maxParticipants: 200,
-      organizer: "Prof. Michael Chen",
-      price: null,
-      status: "Open",
-      image: "/placeholder.svg",
-      tags: ["Robotics", "Future Tech", "Innovation"]
-    },
-    {
-      id: 3,
-      title: "Hackathon 2024: Code for Change",
-      description: "48-hour hackathon focused on developing solutions for social impact.",
-      category: "Hackathon",
-      date: "OCT 15",
-      time: "9:00 AM",
-      location: "Innovation Center",
-      participants: 89,
-      maxParticipants: 100,
-      organizer: "Optimus Tech Club",
-      price: "₹500",
-      status: "Event Ended",
-      image: "/placeholder.svg",
-      tags: ["Social Impact", "Innovation", "Teamwork"]
-    },
-    {
-      id: 4,
-      title: "Cybersecurity Bootcamp",
-      description: "Intensive bootcamp covering ethical hacking, penetration testing, and security.",
-      category: "Bootcamp",
-      date: "NOV 5",
-      time: "10:00 AM",
-      location: "Security Lab",
-      participants: 35,
-      maxParticipants: 40,
-      organizer: "CyberSec Team",
-      price: "₹1500",
-      status: "Few Spots Left",
-      image: "/placeholder.svg",
-      tags: ["Cybersecurity", "Ethical Hacking", "Security"]
+  useEffect(() => {
+    fetchEvents();
+  }, [selectedFilter, searchQuery]);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      
+      let query = supabase
+        .from('events')
+        .select(`
+          *,
+          profiles(name)
+        `)
+        .order('event_date', { ascending: true });
+
+      // Apply filters
+      if (selectedFilter === "free") {
+        query = query.eq('price', 0);
+      } else if (selectedFilter === "paid") {
+        query = query.gt('price', 0);
+      }
+
+      // Apply search
+      if (searchQuery) {
+        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      }
+
+      const { data: eventsData, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      setEvents((eventsData || []) as unknown as Event[]);
+
+      // Fetch registration counts for each event
+      if (eventsData && eventsData.length > 0) {
+        const eventIds = eventsData.map(event => event.id);
+        const { data: registrations } = await supabase
+          .from('event_registrations')
+          .select('event_id')
+          .in('event_id', eventIds);
+
+        const counts: { [key: string]: number } = {};
+        registrations?.forEach(reg => {
+          counts[reg.event_id] = (counts[reg.event_id] || 0) + 1;
+        });
+        setRegistrationCounts(counts);
+
+        // Update stats
+        const totalEvents = eventsData.length;
+        const totalParticipants = Object.values(counts).reduce((sum, count) => sum + count, 0);
+        const freeEvents = eventsData.filter(event => event.price === 0).length;
+        const categories = new Set(eventsData.map(event => 'Workshop')).size; // Simplified for now
+
+        setStats([
+          { label: "Total Events", value: totalEvents.toString(), icon: Calendar },
+          { label: "Active Participants", value: totalParticipants.toString(), icon: Users },
+          { label: "Free Events", value: freeEvents.toString(), icon: Tag },
+          { label: "Categories", value: categories.toString(), icon: Filter }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load events. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric'
+    }).toUpperCase();
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  };
+
+  const getEventStatus = (event: Event) => {
+    const now = new Date();
+    const eventDate = new Date(event.event_date);
+    const registrationCount = registrationCounts[event.id] || 0;
+    
+    if (eventDate < now) {
+      return { status: "Event Ended", color: "bg-muted/20 text-muted-foreground border-muted/30" };
+    }
+    
+    if (event.max_participants && registrationCount >= event.max_participants) {
+      return { status: "Full", color: "bg-warning/20 text-warning border-warning/30" };
+    }
+    
+    if (event.max_participants && registrationCount > event.max_participants * 0.8) {
+      return { status: "Few Spots Left", color: "bg-warning/20 text-warning border-warning/30" };
+    }
+    
+    return { status: "Open", color: "bg-success/20 text-success border-success/30" };
+  };
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -196,86 +264,132 @@ const EventHub = () => {
         </div>
 
         {/* Events Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-          {events.map((event, index) => (
-            <Card 
-              key={event.id} 
-              className="event-card fade-up overflow-hidden"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <div className="relative">
-                <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                  <Calendar className="h-16 w-16 text-primary/60" />
-                </div>
-                
-                {/* Date Badge */}
-                <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2">
-                  <div className="text-sm font-bold text-primary">{event.date}</div>
-                </div>
-                
-                {/* Price Badge */}
-                {event.price && (
-                  <div className="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm rounded-lg px-3 py-2">
-                    <div className="text-sm font-bold text-primary-foreground">{event.price}</div>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+            {[...Array(6)].map((_, index) => (
+              <Card key={index} className="card-modern overflow-hidden">
+                <Skeleton className="h-48 w-full" />
+                <CardHeader className="pb-2">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
                   </div>
-                )}
-                
-                {/* Category Badge */}
-                <div className="absolute bottom-4 left-4">
-                  <Badge className={getCategoryColor(event.category)}>
-                    {event.category}
-                  </Badge>
-                </div>
-              </div>
+                  <Skeleton className="h-10 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+            {events.map((event, index) => {
+              const { status, color } = getEventStatus(event);
+              const registrationCount = registrationCounts[event.id] || 0;
               
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-xl font-bold line-clamp-2">{event.title}</h3>
-                </div>
-                <p className="text-muted-foreground text-sm line-clamp-2">{event.description}</p>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span>{event.time}</span>
+              return (
+              <Card 
+                key={event.id} 
+                className="event-card fade-up overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300"
+                style={{ animationDelay: `${index * 0.1}s` }}
+                onClick={() => navigate(`/events/${event.id}`)}
+              >
+                <div className="relative">
+                  <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                    {event.image_url ? (
+                      <img 
+                        src={event.image_url} 
+                        alt={event.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Calendar className="h-16 w-16 text-primary/60" />
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    <span className="truncate">{event.location}</span>
+                  
+                  {/* Date Badge */}
+                  <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2">
+                    <div className="text-sm font-bold text-primary">{formatDate(event.event_date)}</div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>{event.participants}/{event.maxParticipants}</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    by {event.organizer}
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap gap-1">
-                  {event.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
+                  
+                  {/* Price Badge */}
+                  {event.price > 0 && (
+                    <div className="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm rounded-lg px-3 py-2">
+                      <div className="text-sm font-bold text-primary-foreground">₹{event.price}</div>
+                    </div>
+                  )}
+                  
+                  {/* Category Badge */}
+                  <div className="absolute bottom-4 left-4">
+                    <Badge className="bg-primary/20 text-primary">
+                      Workshop
                     </Badge>
-                  ))}
+                  </div>
                 </div>
                 
-                <div className="flex gap-2">
-                  <Button className="btn-hero flex-1">View Details</Button>
-                  <Button 
-                    variant="outline" 
-                    className={`flex-1 ${getStatusColor(event.status)}`}
-                    disabled={event.status === "Event Ended"}
-                  >
-                    {event.status}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-xl font-bold line-clamp-2">{event.title}</h3>
+                  </div>
+                  <p className="text-muted-foreground text-sm line-clamp-2">{event.description}</p>
+                </CardHeader>
+                
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      <span>{formatTime(event.event_date)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <span className="truncate">Online</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span>{registrationCount}{event.max_participants ? `/${event.max_participants}` : ''}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      by {event.profiles?.name || 'Optimus Team'}
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      className="btn-hero flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/events/${event.id}`);
+                      }}
+                    >
+                      View Details
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className={`flex-1 ${color}`}
+                      disabled={status === "Event Ended"}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {status}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+            })}
+          </div>
+        )}
+        
+        {!loading && events.length === 0 && (
+          <div className="text-center py-12">
+            <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No events found</h3>
+            <p className="text-muted-foreground">
+              {selectedFilter === "all" ? "No events available at the moment." : `No ${selectedFilter} events found.`}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
