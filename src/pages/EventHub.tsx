@@ -192,13 +192,6 @@ const EventHub = () => {
               Join the premier university tech club community.
             </p>
           </div>
-          <Button 
-            onClick={() => window.location.href = '/create-event'} 
-            className="btn-hero"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Event
-          </Button>
         </div>
 
         {/* Stats Section */}
