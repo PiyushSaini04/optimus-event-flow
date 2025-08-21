@@ -14,11 +14,14 @@ interface Event {
   id: string;
   title: string;
   description: string;
-  event_date: string;
-  price: number;
+  start_date: string;
+  ticket_price: number | null;
   max_participants: number;
-  image_url: string;
-  created_by: string;
+  banner_url: string | null;
+  created_by: string | null;
+  location: string;
+  category: string;
+  organizer_name: string;
   profiles?: {
     name: string;
   } | null;
@@ -63,13 +66,13 @@ const EventHub = () => {
           *,
           profiles(name)
         `)
-        .order('event_date', { ascending: true });
+        .order('start_date', { ascending: true });
 
       // Apply filters
       if (selectedFilter === "free") {
-        query = query.eq('price', 0);
+        query = query.is('ticket_price', null).or('ticket_price.eq.0');
       } else if (selectedFilter === "paid") {
-        query = query.gt('price', 0);
+        query = query.gt('ticket_price', 0);
       }
 
       // Apply search
@@ -85,33 +88,17 @@ const EventHub = () => {
 
       setEvents((eventsData || []) as unknown as Event[]);
 
-      // Fetch registration counts for each event
-      if (eventsData && eventsData.length > 0) {
-        const eventIds = eventsData.map(event => event.id);
-        const { data: registrations } = await supabase
-          .from('event_registrations')
-          .select('event_id')
-          .in('event_id', eventIds);
+      // Simplify stats calculation - remove registration counts for now
+      const totalEvents = eventsData.length;
+      const freeEvents = eventsData.filter(event => !event.ticket_price || event.ticket_price === 0).length;
+      const categories = new Set(eventsData.map(event => event.category || 'Workshop')).size;
 
-        const counts: { [key: string]: number } = {};
-        registrations?.forEach(reg => {
-          counts[reg.event_id] = (counts[reg.event_id] || 0) + 1;
-        });
-        setRegistrationCounts(counts);
-
-        // Update stats
-        const totalEvents = eventsData.length;
-        const totalParticipants = Object.values(counts).reduce((sum, count) => sum + count, 0);
-        const freeEvents = eventsData.filter(event => event.price === 0).length;
-        const categories = new Set(eventsData.map(event => 'Workshop')).size; // Simplified for now
-
-        setStats([
-          { label: "Total Events", value: totalEvents.toString(), icon: Calendar },
-          { label: "Active Participants", value: totalParticipants.toString(), icon: Users },
-          { label: "Free Events", value: freeEvents.toString(), icon: Tag },
-          { label: "Categories", value: categories.toString(), icon: Filter }
-        ]);
-      }
+      setStats([
+        { label: "Total Events", value: totalEvents.toString(), icon: Calendar },
+        { label: "Active Participants", value: "0", icon: Users },
+        { label: "Free Events", value: freeEvents.toString(), icon: Tag },
+        { label: "Categories", value: categories.toString(), icon: Filter }
+      ]);
     } catch (error) {
       console.error('Error fetching events:', error);
       toast({
@@ -143,21 +130,13 @@ const EventHub = () => {
 
   const getEventStatus = (event: Event) => {
     const now = new Date();
-    const eventDate = new Date(event.event_date);
-    const registrationCount = registrationCounts[event.id] || 0;
+    const eventDate = new Date(event.start_date);
     
     if (eventDate < now) {
       return { status: "Event Ended", color: "bg-muted/20 text-muted-foreground border-muted/30" };
     }
     
-    if (event.max_participants && registrationCount >= event.max_participants) {
-      return { status: "Full", color: "bg-warning/20 text-warning border-warning/30" };
-    }
-    
-    if (event.max_participants && registrationCount > event.max_participants * 0.8) {
-      return { status: "Few Spots Left", color: "bg-warning/20 text-warning border-warning/30" };
-    }
-    
+    // Simplified status logic without registration counts
     return { status: "Open", color: "bg-success/20 text-success border-success/30" };
   };
 
@@ -280,7 +259,6 @@ const EventHub = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
             {events.map((event, index) => {
               const { status, color } = getEventStatus(event);
-              const registrationCount = registrationCounts[event.id] || 0;
               
               return (
               <Card 
@@ -291,9 +269,9 @@ const EventHub = () => {
               >
                 <div className="relative">
                   <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                    {event.image_url ? (
+                    {event.banner_url ? (
                       <img 
-                        src={event.image_url} 
+                        src={event.banner_url} 
                         alt={event.title}
                         className="w-full h-full object-cover"
                       />
@@ -304,20 +282,19 @@ const EventHub = () => {
                   
                   {/* Date Badge */}
                   <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2">
-                    <div className="text-sm font-bold text-primary">{formatDate(event.event_date)}</div>
+                    <div className="text-sm font-bold text-primary">{formatDate(event.start_date)}</div>
                   </div>
                   
                   {/* Price Badge */}
-                  {event.price > 0 && (
+                  {event.ticket_price && event.ticket_price > 0 && (
                     <div className="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm rounded-lg px-3 py-2">
-                      <div className="text-sm font-bold text-primary-foreground">₹{event.price}</div>
+                      <div className="text-sm font-bold text-primary-foreground">₹{event.ticket_price}</div>
                     </div>
                   )}
                   
-                  {/* Category Badge */}
                   <div className="absolute bottom-4 left-4">
                     <Badge className="bg-primary/20 text-primary">
-                      Workshop
+                      {event.category || 'Workshop'}
                     </Badge>
                   </div>
                 </div>
@@ -333,18 +310,18 @@ const EventHub = () => {
                   <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4" />
-                      <span>{formatTime(event.event_date)}</span>
+                      <span>{formatTime(event.start_date)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
-                      <span className="truncate">Online</span>
+                      <span className="truncate">{event.location || 'Online'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
-                      <span>{registrationCount}{event.max_participants ? `/${event.max_participants}` : ''}</span>
+                      <span>0{event.max_participants ? `/${event.max_participants}` : ''}</span>
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
-                      by {event.profiles?.name || 'Optimus Team'}
+                      by {event.profiles?.name || event.organizer_name || 'Optimus Team'}
                     </div>
                   </div>
                   

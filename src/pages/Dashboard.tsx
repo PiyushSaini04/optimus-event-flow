@@ -24,19 +24,19 @@ import { supabase } from "@/integrations/supabase/client";
 interface Event {
   id: string;
   title: string;
-  description: string | null;
+  description: string;
   start_date: string;
   location: string;
-  ticket_price: number;
-  max_participants: number | null;
+  ticket_price: number | null;
+  max_participants: number;
   category: string;
   banner_url: string | null;
-  created_at: string;
-  created_by: string;
+  created_at: string | null;
+  created_by: string | null;
   contact_email: string;
   contact_phone: string | null;
   organizer_name: string;
-  end_date: string | null;
+  end_date: string;
   registration_link: string | null;
 }
 
@@ -354,7 +354,7 @@ const Dashboard = () => {
                             <Badge className={getCategoryColor(event.category || 'Workshop')}>
                               {event.category || 'Workshop'}
                             </Badge>
-                            {event.ticket_price > 0 && (
+                            {event.ticket_price && event.ticket_price > 0 && (
                               <Badge variant="outline">₹{event.ticket_price}</Badge>
                             )}
                           </div>
