@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const CreateEvent = () => {
   const navigate = useNavigate();
@@ -61,12 +62,63 @@ const CreateEvent = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
     try {
-      // Here you would typically send the data to your backend
-      console.log('Event created:', formData);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to create events.",
+          variant: "destructive",
+        });
+        navigate('/auth');
+        return;
+      }
+
+      // Upload banner if provided
+      let bannerUrl = null;
+      if (formData.banner) {
+        const fileExt = formData.banner.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('event-banners')
+          .upload(fileName, formData.banner);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('event-banners')
+          .getPublicUrl(fileName);
+          
+        bannerUrl = publicUrl;
+      }
+
+      // Create event in database
+      const { error } = await supabase
+        .from('events')
+        .insert({
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          start_date: formData.startDate,
+          end_date: formData.endDate || formData.startDate,
+          location: formData.location,
+          organizer_name: formData.organizerName,
+          contact_email: formData.contactEmail,
+          contact_phone: formData.contactPhone,
+          registration_link: formData.registrationLink,
+          ticket_price: parseFloat(formData.ticketPrice) || 0,
+          max_participants: parseInt(formData.maxParticipants),
+          banner_url: bannerUrl,
+          created_by: user.id
+        });
+
+      if (error) {
+        throw error;
+      }
       
       toast({
         title: "Event Created Successfully!",
@@ -75,6 +127,7 @@ const CreateEvent = () => {
 
       navigate('/dashboard');
     } catch (error) {
+      console.error('Error creating event:', error);
       toast({
         title: "Error",
         description: "Failed to create event. Please try again.",

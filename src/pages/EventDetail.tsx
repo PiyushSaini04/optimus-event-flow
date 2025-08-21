@@ -11,12 +11,15 @@ import { supabase } from "@/integrations/supabase/client";
 interface Event {
   id: string;
   title: string;
-  description: string;
-  event_date: string;
-  price: number;
-  max_participants: number;
-  image_url: string;
+  description: string | null;
+  start_date: string;
+  ticket_price: number;
+  max_participants: number | null;
+  banner_url: string | null;
   created_by: string;
+  location: string;
+  category: string;
+  organizer_name: string;
   profiles?: {
     name: string;
   } | null;
@@ -142,7 +145,7 @@ const EventDetail = () => {
         .insert({
           event_id: id,
           user_id: user.id,
-          payment_status: event?.price && event.price > 0 ? 'pending' : 'completed'
+          payment_status: event?.ticket_price && event.ticket_price > 0 ? 'pending' : 'completed'
         });
 
       if (error) {
@@ -220,7 +223,7 @@ const EventDetail = () => {
     return null;
   }
 
-  const { date, time } = formatDate(event.event_date);
+  const { date, time } = formatDate(event.start_date);
   const spotsLeft = event.max_participants ? event.max_participants - registrations.length : null;
 
   return (
@@ -232,9 +235,9 @@ const EventDetail = () => {
             {/* Hero Section */}
             <Card className="card-modern overflow-hidden">
               <div className="relative h-64 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                {event.image_url ? (
+                {event.banner_url ? (
                   <img 
-                    src={event.image_url} 
+                    src={event.banner_url} 
                     alt={event.title}
                     className="w-full h-full object-cover"
                   />
@@ -244,9 +247,9 @@ const EventDetail = () => {
                 <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2">
                   <div className="text-sm font-bold text-primary">{date}</div>
                 </div>
-                {event.price > 0 && (
+                {event.ticket_price > 0 && (
                   <div className="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm rounded-lg px-3 py-2">
-                    <div className="text-sm font-bold text-primary-foreground">₹{event.price}</div>
+                    <div className="text-sm font-bold text-primary-foreground">₹{event.ticket_price}</div>
                   </div>
                 )}
               </div>
@@ -261,14 +264,14 @@ const EventDetail = () => {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="h-4 w-4" />
-                    <span>Online</span>
+                    <span>{event.location}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
                     <span>{registrations.length}{event.max_participants ? `/${event.max_participants}` : ''}</span>
                   </div>
-                  <Badge variant={event.price > 0 ? "default" : "secondary"}>
-                    {event.price > 0 ? "Paid" : "Free"}
+                  <Badge variant={event.ticket_price > 0 ? "default" : "secondary"}>
+                    {event.ticket_price > 0 ? "Paid" : "Free"}
                   </Badge>
                 </div>
               </CardContent>
@@ -347,9 +350,9 @@ const EventDetail = () => {
                 <h3 className="text-xl font-bold">Registration</h3>
               </CardHeader>
               <CardContent className="space-y-4">
-                {event.price > 0 && (
+                {event.ticket_price > 0 && (
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-primary">₹{event.price}</div>
+                    <div className="text-3xl font-bold text-primary">₹{event.ticket_price}</div>
                     <div className="text-sm text-muted-foreground">Full access pass</div>
                   </div>
                 )}

@@ -24,14 +24,20 @@ import { supabase } from "@/integrations/supabase/client";
 interface Event {
   id: string;
   title: string;
-  description: string;
-  event_date: string;
+  description: string | null;
+  start_date: string;
   location: string;
-  price: number;
-  max_participants: number;
+  ticket_price: number;
+  max_participants: number | null;
   category: string;
   banner_url: string | null;
   created_at: string;
+  created_by: string;
+  contact_email: string;
+  contact_phone: string | null;
+  organizer_name: string;
+  end_date: string | null;
+  registration_link: string | null;
 }
 
 interface UserProfile {
@@ -103,8 +109,8 @@ const Dashboard = () => {
       
       // Calculate stats
       const now = new Date();
-      const activeEvents = eventsData?.filter(event => new Date(event.event_date) > now).length || 0;
-      const completedEvents = eventsData?.filter(event => new Date(event.event_date) < now).length || 0;
+      const activeEvents = eventsData?.filter(event => new Date(event.start_date) > now).length || 0;
+      const completedEvents = eventsData?.filter(event => new Date(event.start_date) < now).length || 0;
       
       setStats({
         totalEvents: eventsData?.length || 0,
@@ -348,12 +354,12 @@ const Dashboard = () => {
                             <Badge className={getCategoryColor(event.category || 'Workshop')}>
                               {event.category || 'Workshop'}
                             </Badge>
-                            {event.price > 0 && (
-                              <Badge variant="outline">₹{event.price}</Badge>
+                            {event.ticket_price > 0 && (
+                              <Badge variant="outline">₹{event.ticket_price}</Badge>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {formatDate(event.event_date)} • {event.location || 'Online'}
+                            {formatDate(event.start_date)} • {event.location || 'Online'}
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">

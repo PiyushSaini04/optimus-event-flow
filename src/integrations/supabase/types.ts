@@ -14,77 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
-      event_registrations: {
-        Row: {
-          event_id: string
-          id: string
-          payment_id: string | null
-          payment_status: string | null
-          registered_at: string
-          user_id: string
-        }
-        Insert: {
-          event_id: string
-          id?: string
-          payment_id?: string | null
-          payment_status?: string | null
-          registered_at?: string
-          user_id: string
-        }
-        Update: {
-          event_id?: string
-          id?: string
-          payment_id?: string | null
-          payment_status?: string | null
-          registered_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_registrations_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       events: {
         Row: {
-          created_at: string
-          created_by: string
-          description: string | null
-          event_date: string
+          banner_url: string | null
+          category: string
+          contact_email: string
+          contact_phone: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          end_date: string
           id: string
-          image_url: string | null
-          max_participants: number | null
-          price: number
+          location: string
+          max_participants: number
+          organizer_name: string
+          registration_link: string | null
+          start_date: string
+          ticket_price: number | null
           title: string
-          updated_at: string
         }
         Insert: {
-          created_at?: string
-          created_by: string
-          description?: string | null
-          event_date: string
+          banner_url?: string | null
+          category: string
+          contact_email: string
+          contact_phone?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          end_date: string
           id?: string
-          image_url?: string | null
-          max_participants?: number | null
-          price?: number
+          location: string
+          max_participants: number
+          organizer_name: string
+          registration_link?: string | null
+          start_date: string
+          ticket_price?: number | null
           title: string
-          updated_at?: string
         }
         Update: {
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          event_date?: string
+          banner_url?: string | null
+          category?: string
+          contact_email?: string
+          contact_phone?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          end_date?: string
           id?: string
-          image_url?: string | null
-          max_participants?: number | null
-          price?: number
+          location?: string
+          max_participants?: number
+          organizer_name?: string
+          registration_link?: string | null
+          start_date?: string
+          ticket_price?: number | null
           title?: string
-          updated_at?: string
         }
         Relationships: []
       }
