@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Users, Calendar, Award, Code, Rocket, Zap } from "lucide-react";
@@ -9,6 +10,29 @@ const Home = () => {
   const [typedText, setTypedText] = useState("");
   const fullText = "Optimus Technical Club";
   
+=======
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import {
+  Users,
+  Trophy,
+  Lightbulb,
+  Users2,
+  Rocket,
+  Leaf,
+  Globe,
+  Zap,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+const Home = () => {
+  // typing animation for OPTIMUS
+  const [typedText, setTypedText] = useState("");
+  const fullText = "OPTIMUS";
+
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
   useEffect(() => {
     let i = 0;
     const timer = setInterval(() => {
@@ -18,6 +42,7 @@ const Home = () => {
       } else {
         clearInterval(timer);
       }
+<<<<<<< HEAD
     }, 100);
     
     return () => clearInterval(timer);
@@ -175,6 +200,220 @@ const Home = () => {
                 <Link to="/events">Browse Events</Link>
               </Button>
             </div>
+=======
+    }, 150);
+    return () => clearInterval(timer);
+  }, []);
+
+  const values = [
+    {
+      icon: Lightbulb,
+      title: "Innovation",
+      description: "Pushing boundaries and creating new solutions",
+    },
+    {
+      icon: Users2,
+      title: "Teamwork",
+      description: "Collaborating to achieve common goals",
+    },
+    {
+      icon: Trophy,
+      title: "Excellence",
+      description: "Striving for the highest standards",
+    },
+    {
+      icon: Leaf,
+      title: "Growth Mindset",
+      description: "Continuous learning and development",
+    },
+    {
+      icon: Globe,
+      title: "Community Impact",
+      description: "Making a positive difference together",
+    },
+    {
+      icon: Rocket,
+      title: "Leadership",
+      description: "Inspiring and guiding others to success",
+    },
+  ];
+
+  // Gallery images
+  const gallery = [
+    "/gallery/img1.jpg",
+    "/gallery/img2.jpg",
+    "/gallery/img3.jpg",
+    "/gallery/img4.jpg",
+    "/gallery/img5.jpg",
+  ];
+
+  // Gallery state
+  const [current, setCurrent] = useState(0);
+
+  // Autoplay effect
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % gallery.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [gallery.length]);
+
+  return (
+    <div className="bg-[#0B0F19] text-white min-h-screen">
+      {/* Hero Section */}
+      <section className="relative flex flex-col md:flex-row items-center justify-between px-6 md:px-20 py-28">
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="max-w-xl space-y-6"
+        >
+          <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+            Welcome To{" "}
+            <span className="block text-primary border-l-4 pl-2 mt-2">
+              {typedText}
+            </span>
+          </h1>
+          <p className="text-lg text-gray-400">
+            A vibrant community empowering creativity, leadership, and
+            collaboration to drive innovation and meaningful change.
+          </p>
+          <div className="flex gap-4 mt-6">
+            <Button className="px-6 py-3 text-lg">LET'S CONNECT</Button>
+            <Button variant="outline" className="px-6 py-3 text-lg">
+              <Link to="/events">EXPLORE EVENTS</Link>
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Placeholder 3D Model / Image */}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.9 }}
+          className="mt-12 md:mt-0"
+        >
+          <img
+            src="/assets/3d-shape.png"
+            alt="3D Shape"
+            className="w-80 md:w-[400px]"
+          />
+        </motion.div>
+      </section>
+
+      {/* What We Do Section */}
+      <section className="py-20 px-6 md:px-20">
+        <motion.h2
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+          className="text-3xl md:text-4xl font-bold text-center mb-12"
+        >
+          What We <span className="text-primary border-b-4 border-primary">Do</span>
+        </motion.h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <Card className="bg-[#111827] border-primary/30">
+              <CardHeader>
+                <CardTitle className="text-xl">◎ Our Mission</CardTitle>
+              </CardHeader>
+              <CardContent className="text-gray-400 leading-relaxed">
+                At Optimus, we're dedicated to creating a dynamic space where
+                innovation thrives. Our mission is to empower students through
+                hands-on learning, collaborative projects, and real-world
+                challenges. We believe in nurturing talent and providing the
+                tools needed to turn ideas into impactful solutions.
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <Card className="bg-[#111827] border-primary/30">
+              <CardHeader>
+                <CardTitle className="text-xl">◎ Our Vision</CardTitle>
+              </CardHeader>
+              <CardContent className="text-gray-400 leading-relaxed">
+                We envision a future where every student has the opportunity to
+                develop their technical skills and leadership abilities. Our goal
+                is to build a community that not only learns together but also
+                creates lasting impact through technology and innovation.
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Core Values Section */}
+      <section className="py-20 px-6 md:px-20 bg-[#0F172A]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {values.map((value, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              viewport={{ once: true }}
+            >
+              <Card className="bg-[#111827] border border-primary/20 text-center hover:shadow-lg hover:shadow-primary/30 transition">
+                <CardHeader>
+                  <div className="flex justify-center mb-4">
+                    <value.icon className="w-10 h-10 text-primary" />
+                  </div>
+                  <CardTitle className="text-xl">{value.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-400">{value.description}</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Gallery Section */}
+      <section className="py-20 px-6 md:px-20">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
+          Gall <span className="text-primary border-b-4 border-primary">|</span>
+        </h2>
+
+        <div className="relative max-w-3xl mx-auto">
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={current}
+              src={gallery[current]}
+              alt={`Gallery ${current + 1}`}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.6 }}
+              className="w-full rounded-lg shadow-lg border border-gray-700 object-cover h-[400px]"
+            />
+          </AnimatePresence>
+
+          {/* Dots */}
+          <div className="flex justify-center mt-6 gap-3">
+            {gallery.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrent(idx)}
+                className={`w-3 h-3 rounded-full ${
+                  current === idx ? "bg-primary" : "bg-gray-500"
+                }`}
+              />
+            ))}
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
           </div>
         </div>
       </section>
@@ -182,4 +421,8 @@ const Home = () => {
   );
 };
 
+<<<<<<< HEAD
 export default Home;
+=======
+export default Home;
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)

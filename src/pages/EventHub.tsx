@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+<<<<<<< HEAD
 import { Search, Filter, Calendar, Users, MapPin, Clock, Tag, Plus } from "lucide-react";
+=======
+import { Search, Filter, Calendar, Users, MapPin, Clock, Tag } from "lucide-react";
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -9,11 +13,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+<<<<<<< HEAD
+=======
+import { Link } from "react-router-dom";
+
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
 
 interface Event {
   id: string;
   title: string;
   description: string;
+<<<<<<< HEAD
   start_date: string;
   ticket_price: number | null;
   max_participants: number;
@@ -25,6 +35,21 @@ interface Event {
   profiles?: {
     name: string;
   } | null;
+=======
+  category: string;
+  start_date: string;
+  end_date: string;
+  location: string;
+  organizer_name: string;
+  contact_email: string;
+  contact_phone: string | null;
+  registration_link: string | null;
+  max_participants: number;
+  ticket_price: number | null;
+  banner_url: string | null;
+  created_by: string | null;
+  created_at: string;
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
 }
 
 const EventHub = () => {
@@ -35,7 +60,10 @@ const EventHub = () => {
   const [sortBy, setSortBy] = useState("date");
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
   const [registrationCounts, setRegistrationCounts] = useState<{ [key: string]: number }>({});
+=======
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
 
   const [stats, setStats] = useState([
     { label: "Total Events", value: "0", icon: Calendar },
@@ -62,6 +90,7 @@ const EventHub = () => {
       
       let query = supabase
         .from('events')
+<<<<<<< HEAD
         .select(`
           *,
           profiles(name)
@@ -69,13 +98,21 @@ const EventHub = () => {
         .order('start_date', { ascending: true });
 
       // Apply filters
+=======
+        .select('*')
+        .order('start_date', { ascending: true });
+
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
       if (selectedFilter === "free") {
         query = query.is('ticket_price', null).or('ticket_price.eq.0');
       } else if (selectedFilter === "paid") {
         query = query.gt('ticket_price', 0);
       }
 
+<<<<<<< HEAD
       // Apply search
+=======
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
       if (searchQuery) {
         query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       }
@@ -83,6 +120,7 @@ const EventHub = () => {
       const { data: eventsData, error } = await query;
 
       if (error) {
+<<<<<<< HEAD
         throw error;
       }
 
@@ -92,6 +130,16 @@ const EventHub = () => {
       const totalEvents = eventsData.length;
       const freeEvents = eventsData.filter(event => !event.ticket_price || event.ticket_price === 0).length;
       const categories = new Set(eventsData.map(event => event.category || 'Workshop')).size;
+=======
+        console.error("Supabase error:", error);
+      } else {
+        setEvents(eventsData as Event[]);
+      }
+
+      const totalEvents = eventsData?.length || 0;
+      const freeEvents = eventsData?.filter(event => !event.ticket_price || event.ticket_price === 0).length || 0;
+      const categories = new Set(eventsData?.map(event => event.category || 'Workshop')).size;
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
 
       setStats([
         { label: "Total Events", value: totalEvents.toString(), icon: Calendar },
@@ -128,6 +176,7 @@ const EventHub = () => {
     });
   };
 
+<<<<<<< HEAD
   const getEventStatus = (event: Event) => {
     const now = new Date();
     const eventDate = new Date(event.start_date);
@@ -162,6 +211,10 @@ const EventHub = () => {
   return (
     <div className="min-h-screen pt-6">
       {/* Header */}
+=======
+  return (
+    <div className="min-h-screen pt-6">
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 space-y-4 md:space-y-0">
           <div>
@@ -257,15 +310,22 @@ const EventHub = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+<<<<<<< HEAD
             {events.map((event, index) => {
               const { status, color } = getEventStatus(event);
               
               return (
+=======
+            {events.map((event, index) => (
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
               <Card 
                 key={event.id} 
                 className="event-card fade-up overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300"
                 style={{ animationDelay: `${index * 0.1}s` }}
+<<<<<<< HEAD
                 onClick={() => navigate(`/events/${event.id}`)}
+=======
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
               >
                 <div className="relative">
                   <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
@@ -320,6 +380,7 @@ const EventHub = () => {
                       <Users className="h-4 w-4" />
                       <span>0{event.max_participants ? `/${event.max_participants}` : ''}</span>
                     </div>
+<<<<<<< HEAD
                     <div className="text-xs text-muted-foreground truncate">
                       by {event.profiles?.name || event.organizer_name || 'Optimus Team'}
                     </div>
@@ -348,6 +409,19 @@ const EventHub = () => {
               </Card>
             );
             })}
+=======
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button asChild>
+                      <Link to={`/events/${event.id}`}>View Details</Link>
+                  </Button>
+
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
           </div>
         )}
         
@@ -365,4 +439,8 @@ const EventHub = () => {
   );
 };
 
+<<<<<<< HEAD
 export default EventHub;
+=======
+export default EventHub;
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)

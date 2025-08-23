@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+<<<<<<< HEAD
 import { Calendar, MapPin, Users, DollarSign, Upload, ArrowLeft, Save } from "lucide-react";
+=======
+import { Calendar, MapPin, DollarSign, Upload, ArrowLeft, Save } from "lucide-react";
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +22,7 @@ const CreateEvent = () => {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
+<<<<<<< HEAD
     title: '',
     description: '',
     category: '',
@@ -46,12 +51,47 @@ const CreateEvent = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+=======
+    title: "",
+    description: "",
+    category: "",
+    start_date: "",
+    end_date: "",
+    location: "",
+    organizer_name: "Optimus Tech Club",
+    contact_email: "",
+    contact_phone: "",
+    registration_link: "",
+    ticket_price: "",
+    max_participants: "",
+    banner: null as File | null,
+  });
+
+  const categories = [
+    "Workshop",
+    "Seminar",
+    "Hackathon",
+    "Tech Talk",
+    "Competition",
+    "Bootcamp",
+    "Conference",
+    "Networking",
+    "Cultural",
+  ];
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
   };
 
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+<<<<<<< HEAD
       setFormData(prev => ({ ...prev, banner: file }));
+=======
+      setFormData((prev) => ({ ...prev, banner: file }));
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
       const reader = new FileReader();
       reader.onload = () => setBannerPreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -64,18 +104,27 @@ const CreateEvent = () => {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
       if (!user) {
         toast({
           title: "Authentication Required",
           description: "Please sign in to create events.",
           variant: "destructive",
         });
+<<<<<<< HEAD
         navigate('/auth');
+=======
+        navigate("/auth");
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
         return;
       }
 
       // Upload banner if provided
+<<<<<<< HEAD
       let bannerUrl = null;
       if (formData.banner) {
         const fileExt = formData.banner.name.split('.').pop();
@@ -120,14 +169,61 @@ const CreateEvent = () => {
         throw error;
       }
       
+=======
+      let banner_url = null;
+      if (formData.banner) {
+        const fileExt = formData.banner.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        const filePath = `event-banners/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("event-banners")
+          .upload(filePath, formData.banner);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+          .from("event-banners")
+          .getPublicUrl(filePath);
+
+        banner_url = data.publicUrl;
+      }
+
+      // Insert event into database
+      const { error } = await supabase.from("events").insert({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        start_date: formData.start_date,
+        end_date: formData.end_date || formData.start_date,
+        location: formData.location,
+        organizer_name: formData.organizer_name,
+        contact_email: formData.contact_email,
+        contact_phone: formData.contact_phone,
+        registration_link: formData.registration_link,
+        ticket_price: formData.ticket_price ? parseFloat(formData.ticket_price) : null,
+        max_participants: formData.max_participants ? parseInt(formData.max_participants) : null,
+        banner_url,
+        created_by: user.id,
+      });
+
+      if (error) throw error;
+
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
       toast({
         title: "Event Created Successfully!",
         description: "Your event has been created and is now live.",
       });
 
+<<<<<<< HEAD
       navigate('/dashboard');
     } catch (error) {
       console.error('Error creating event:', error);
+=======
+      navigate("/events"); // redirect to events page
+    } catch (error) {
+      console.error("Error creating event:", error);
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
       toast({
         title: "Error",
         description: "Failed to create event. Please try again.",
@@ -142,11 +238,16 @@ const CreateEvent = () => {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
+<<<<<<< HEAD
       transition: {
         duration: 0.6,
         staggerChildren: 0.1
       }
     }
+=======
+      transition: { duration: 0.6, staggerChildren: 0.1 },
+    },
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
   };
 
   const itemVariants = {
@@ -154,8 +255,13 @@ const CreateEvent = () => {
     visible: {
       opacity: 1,
       y: 0,
+<<<<<<< HEAD
       transition: { duration: 0.5 }
     }
+=======
+      transition: { duration: 0.5 },
+    },
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
   };
 
   return (
@@ -169,7 +275,11 @@ const CreateEvent = () => {
           <Button
             variant="outline"
             size="icon"
+<<<<<<< HEAD
             onClick={() => navigate('/events')}
+=======
+            onClick={() => navigate("/events")}
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
             className="btn-outline-hero"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -187,11 +297,16 @@ const CreateEvent = () => {
           animate="visible"
           className="space-y-8"
         >
+<<<<<<< HEAD
           {/* Event Banner */}
+=======
+          {/* Banner Upload */}
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
           <motion.div variants={itemVariants}>
             <Card className="card-modern">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
+<<<<<<< HEAD
                   <Upload className="h-5 w-5 text-primary" />
                   Event Banner
                 </CardTitle>
@@ -205,6 +320,16 @@ const CreateEvent = () => {
                         alt="Banner preview" 
                         className="w-full h-48 object-cover rounded-lg"
                       />
+=======
+                  <Upload className="h-5 w-5 text-primary" /> Event Banner
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors relative">
+                  {bannerPreview ? (
+                    <div className="relative">
+                      <img src={bannerPreview} alt="Banner preview" className="w-full h-48 object-cover rounded-lg" />
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
                       <Button
                         type="button"
                         variant="secondary"
@@ -212,7 +337,11 @@ const CreateEvent = () => {
                         className="absolute top-2 right-2"
                         onClick={() => {
                           setBannerPreview(null);
+<<<<<<< HEAD
                           setFormData(prev => ({ ...prev, banner: null }));
+=======
+                          setFormData((prev) => ({ ...prev, banner: null }));
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
                         }}
                       >
                         Remove
@@ -236,6 +365,7 @@ const CreateEvent = () => {
             </Card>
           </motion.div>
 
+<<<<<<< HEAD
           {/* Basic Information */}
           <motion.div variants={itemVariants}>
             <Card className="card-modern">
@@ -280,6 +410,27 @@ const CreateEvent = () => {
                           {category}
                         </SelectItem>
                       ))}
+=======
+          {/* Title, Description, Category */}
+          <motion.div variants={itemVariants}>
+            <Card className="card-modern">
+              <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Event Title *</Label>
+                  <Input id="title" value={formData.title} onChange={(e) => handleInputChange("title", e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description *</Label>
+                  <Textarea id="description" value={formData.description} onChange={(e) => handleInputChange("description", e.target.value)} rows={4} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category *</Label>
+                  <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
                     </SelectContent>
                   </Select>
                 </div>
@@ -287,6 +438,7 @@ const CreateEvent = () => {
             </Card>
           </motion.div>
 
+<<<<<<< HEAD
           {/* Date & Time */}
           <motion.div variants={itemVariants}>
             <Card className="card-modern">
@@ -320,6 +472,20 @@ const CreateEvent = () => {
                       className="bg-background/50 border-border/50 focus:border-primary"
                     />
                   </div>
+=======
+          {/* Dates */}
+          <motion.div variants={itemVariants}>
+            <Card className="card-modern">
+              <CardHeader><CardTitle className="flex items-center gap-2"><Calendar className="h-5 w-5 text-primary" /> Date & Time</CardTitle></CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Start Date *</Label>
+                  <Input type="datetime-local" value={formData.start_date} onChange={(e) => handleInputChange("start_date", e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Date *</Label>
+                  <Input type="datetime-local" value={formData.end_date} onChange={(e) => handleInputChange("end_date", e.target.value)} required />
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
                 </div>
               </CardContent>
             </Card>
@@ -328,6 +494,7 @@ const CreateEvent = () => {
           {/* Location & Contact */}
           <motion.div variants={itemVariants}>
             <Card className="card-modern">
+<<<<<<< HEAD
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-primary" />
@@ -370,6 +537,22 @@ const CreateEvent = () => {
                       placeholder="+91 98765 43210"
                       className="bg-background/50 border-border/50 focus:border-primary"
                     />
+=======
+              <CardHeader><CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Location & Contact</CardTitle></CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Location *</Label>
+                  <Input value={formData.location} onChange={(e) => handleInputChange("location", e.target.value)} required />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Email *</Label>
+                    <Input type="email" value={formData.contact_email} onChange={(e) => handleInputChange("contact_email", e.target.value)} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone</Label>
+                    <Input type="tel" value={formData.contact_phone} onChange={(e) => handleInputChange("contact_phone", e.target.value)} />
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
                   </div>
                 </div>
               </CardContent>
@@ -379,6 +562,7 @@ const CreateEvent = () => {
           {/* Registration & Pricing */}
           <motion.div variants={itemVariants}>
             <Card className="card-modern">
+<<<<<<< HEAD
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-primary" />
@@ -424,11 +608,27 @@ const CreateEvent = () => {
                       className="bg-background/50 border-border/50 focus:border-primary"
                     />
                   </div>
+=======
+              <CardHeader><CardTitle className="flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary" /> Registration & Pricing</CardTitle></CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Registration Link</Label>
+                  <Input type="url" value={formData.registration_link} onChange={(e) => handleInputChange("registration_link", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ticket Price (₹)</Label>
+                  <Input type="number" value={formData.ticket_price} onChange={(e) => handleInputChange("ticket_price", e.target.value)} min="0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Participants *</Label>
+                  <Input type="number" value={formData.max_participants} onChange={(e) => handleInputChange("max_participants", e.target.value)} min="1" required />
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
+<<<<<<< HEAD
           {/* Submit Button */}
           <motion.div 
             variants={itemVariants}
@@ -447,16 +647,28 @@ const CreateEvent = () => {
               disabled={isLoading}
               className="btn-hero min-w-32"
             >
+=======
+          {/* Submit */}
+          <motion.div variants={itemVariants} className="flex justify-end gap-4">
+            <Button type="button" variant="outline" onClick={() => navigate("/events")}>Cancel</Button>
+            <Button type="submit" disabled={isLoading}>
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   Creating...
                 </div>
               ) : (
+<<<<<<< HEAD
                 <div className="flex items-center gap-2">
                   <Save className="h-4 w-4" />
                   Create Event
                 </div>
+=======
+                <>
+                  <Save className="h-4 w-4" /> Create Event
+                </>
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
               )}
             </Button>
           </motion.div>
@@ -466,4 +678,8 @@ const CreateEvent = () => {
   );
 };
 
+<<<<<<< HEAD
 export default CreateEvent;
+=======
+export default CreateEvent;
+>>>>>>> 0db5559 (Updated homepage with new sections and animations)
