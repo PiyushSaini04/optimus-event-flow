@@ -1,70 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-<<<<<<< HEAD
-import { Calendar, MapPin, Users, DollarSign, Upload, ArrowLeft, Save } from "lucide-react";
-=======
-import { Calendar, MapPin, DollarSign, Upload, ArrowLeft, Save } from "lucide-react";
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
+import { Calendar, MapPin, DollarSign, Upload, ArrowLeft, Save, Building2, AlertCircle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthContext";
+
+interface Organization {
+  id: string;
+  name: string;
+  description: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
 
 const CreateEvent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [showOrgForm, setShowOrgForm] = useState(false);
+  const [loadingOrg, setLoadingOrg] = useState(true);
 
-  const [formData, setFormData] = useState({
-<<<<<<< HEAD
-    title: '',
-    description: '',
-    category: '',
-    startDate: '',
-    endDate: '',
-    location: '',
-    organizerName: 'Optimus Tech Club',
-    contactEmail: '',
-    contactPhone: '',
-    registrationLink: '',
-    ticketPrice: '',
-    maxParticipants: '',
-    banner: null as File | null
-  });
-
-  const categories = [
-    'Workshop',
-    'Seminar', 
-    'Hackathon',
-    'Tech Talk',
-    'Competition',
-    'Bootcamp',
-    'Conference',
-    'Networking'
-  ];
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-=======
+  // Event form data
+  const [eventData, setEventData] = useState({
     title: "",
     description: "",
     category: "",
     start_date: "",
     end_date: "",
     location: "",
-    organizer_name: "Optimus Tech Club",
     contact_email: "",
     contact_phone: "",
     registration_link: "",
     ticket_price: "",
     max_participants: "",
     banner: null as File | null,
+  });
+
+  // Organization form data
+  const [orgData, setOrgData] = useState({
+    name: "",
+    description: "",
   });
 
   const categories = [
@@ -79,151 +64,151 @@ const CreateEvent = () => {
     "Cultural",
   ];
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
+  // Check user's organization status on component mount
+  useEffect(() => {
+    const checkOrganization = async () => {
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('organizations')
+          .select('*')
+          .eq('owner_id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+          throw error;
+        }
+
+        setOrganization(data);
+        setLoadingOrg(false);
+      } catch (error) {
+        console.error('Error checking organization:', error);
+        setLoadingOrg(false);
+      }
+    };
+
+    checkOrganization();
+  }, [user, navigate]);
+
+  const handleEventInputChange = (field: string, value: string) => {
+    setEventData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleOrgInputChange = (field: string, value: string) => {
+    setOrgData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-<<<<<<< HEAD
-      setFormData(prev => ({ ...prev, banner: file }));
-=======
-      setFormData((prev) => ({ ...prev, banner: file }));
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
+      setEventData((prev) => ({ ...prev, banner: file }));
       const reader = new FileReader();
       reader.onload = () => setBannerPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleOrgSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-<<<<<<< HEAD
-      
-=======
+      const { data, error } = await supabase
+        .from('organizations')
+        .insert({
+          name: orgData.name,
+          description: orgData.description,
+          owner_id: user?.id
+        })
+        .select()
+        .single();
 
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
-      if (!user) {
+      if (error) throw error;
+
+      setOrganization(data);
+      setShowOrgForm(false);
+      toast({
+        title: "Organization Registered!",
+        description: "Your organization is under review. Please wait for admin approval.",
+      });
+    } catch (error) {
+      console.error("Error creating organization:", error);
+      toast({
+        title: "Error",
+        description: "Failed to register organization. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEventSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      if (!organization || organization.status !== 'approved') {
         toast({
-          title: "Authentication Required",
-          description: "Please sign in to create events.",
+          title: "Organization Not Approved",
+          description: "Your organization must be approved before creating events.",
           variant: "destructive",
         });
-<<<<<<< HEAD
-        navigate('/auth');
-=======
-        navigate("/auth");
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
         return;
       }
 
       // Upload banner if provided
-<<<<<<< HEAD
-      let bannerUrl = null;
-      if (formData.banner) {
-        const fileExt = formData.banner.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('event-banners')
-          .upload(fileName, formData.banner);
-
-        if (uploadError) {
-          throw uploadError;
-        }
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('event-banners')
-          .getPublicUrl(fileName);
-          
-        bannerUrl = publicUrl;
-      }
-
-      // Create event in database
-      const { error } = await supabase
-        .from('events')
-        .insert({
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          start_date: formData.startDate,
-          end_date: formData.endDate || formData.startDate,
-          location: formData.location,
-          organizer_name: formData.organizerName,
-          contact_email: formData.contactEmail,
-          contact_phone: formData.contactPhone,
-          registration_link: formData.registrationLink,
-          ticket_price: parseFloat(formData.ticketPrice) || 0,
-          max_participants: parseInt(formData.maxParticipants),
-          banner_url: bannerUrl,
-          created_by: user.id
-        });
-
-      if (error) {
-        throw error;
-      }
-      
-=======
       let banner_url = null;
-      if (formData.banner) {
-        const fileExt = formData.banner.name.split(".").pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-        const filePath = `event-banners/${fileName}`;
+      if (eventData.banner) {
+        const fileExt = eventData.banner.name.split(".").pop();
+        const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from("event-banners")
-          .upload(filePath, formData.banner);
+          .upload(fileName, eventData.banner);
 
         if (uploadError) throw uploadError;
 
         const { data } = supabase.storage
           .from("event-banners")
-          .getPublicUrl(filePath);
+          .getPublicUrl(fileName);
 
         banner_url = data.publicUrl;
       }
 
       // Insert event into database
       const { error } = await supabase.from("events").insert({
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        start_date: formData.start_date,
-        end_date: formData.end_date || formData.start_date,
-        location: formData.location,
-        organizer_name: formData.organizer_name,
-        contact_email: formData.contact_email,
-        contact_phone: formData.contact_phone,
-        registration_link: formData.registration_link,
-        ticket_price: formData.ticket_price ? parseFloat(formData.ticket_price) : null,
-        max_participants: formData.max_participants ? parseInt(formData.max_participants) : null,
+        title: eventData.title,
+        description: eventData.description,
+        category: eventData.category,
+        start_date: eventData.start_date,
+        end_date: eventData.end_date || eventData.start_date,
+        location: eventData.location,
+        organizer_name: organization.name,
+        contact_email: eventData.contact_email,
+        contact_phone: eventData.contact_phone,
+        registration_link: eventData.registration_link,
+        ticket_price: eventData.ticket_price ? parseFloat(eventData.ticket_price) : null,
+        max_participants: eventData.max_participants ? parseInt(eventData.max_participants) : null,
         banner_url,
-        created_by: user.id,
+        organization_id: organization.id,
+        status: 'pending'
       });
 
       if (error) throw error;
 
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
       toast({
-        title: "Event Created Successfully!",
-        description: "Your event has been created and is now live.",
+        title: "Event Submitted!",
+        description: "Your event request has been submitted. Please wait for admin approval.",
       });
 
-<<<<<<< HEAD
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Error creating event:', error);
-=======
-      navigate("/events"); // redirect to events page
+      navigate("/events");
     } catch (error) {
       console.error("Error creating event:", error);
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
       toast({
         title: "Error",
         description: "Failed to create event. Please try again.",
@@ -238,16 +223,8 @@ const CreateEvent = () => {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-<<<<<<< HEAD
-      transition: {
-        duration: 0.6,
-        staggerChildren: 0.1
-      }
-    }
-=======
       transition: { duration: 0.6, staggerChildren: 0.1 },
     },
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
   };
 
   const itemVariants = {
@@ -255,15 +232,166 @@ const CreateEvent = () => {
     visible: {
       opacity: 1,
       y: 0,
-<<<<<<< HEAD
-      transition: { duration: 0.5 }
-    }
-=======
       transition: { duration: 0.5 },
     },
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
   };
 
+  if (loadingOrg) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  // No organization - show registration form
+  if (!organization) {
+    return (
+      <div className="min-h-screen pt-6 pb-12">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-4 mb-8"
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate("/events")}
+              className="btn-outline-hero"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-glow">Register Organization</h1>
+              <p className="text-muted-foreground">Register your organization to create events</p>
+            </div>
+          </motion.div>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <Alert className="mb-6">
+              <Building2 className="h-4 w-4" />
+              <AlertDescription>
+                You need to register an organization before creating events. Once registered, your organization will be reviewed by our admin team.
+              </AlertDescription>
+            </Alert>
+
+            <Card className="card-modern">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Organization Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleOrgSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="orgName">Organization Name *</Label>
+                    <Input
+                      id="orgName"
+                      value={orgData.name}
+                      onChange={(e) => handleOrgInputChange("name", e.target.value)}
+                      placeholder="Enter organization name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="orgDescription">Description</Label>
+                    <Textarea
+                      id="orgDescription"
+                      value={orgData.description}
+                      onChange={(e) => handleOrgInputChange("description", e.target.value)}
+                      placeholder="Describe your organization..."
+                      rows={4}
+                    />
+                  </div>
+                  <Button type="submit" disabled={isLoading} className="w-full">
+                    {isLoading ? "Registering..." : "Register Organization"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // Organization pending approval
+  if (organization.status === 'pending') {
+    return (
+      <div className="min-h-screen pt-6 pb-12">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-4 mb-8"
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate("/events")}
+              className="btn-outline-hero"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-glow">Organization Under Review</h1>
+              <p className="text-muted-foreground">Your organization is being reviewed</p>
+            </div>
+          </motion.div>
+
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Your organization "<strong>{organization.name}</strong>" is under review. Please wait for admin approval before creating events.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
+  // Organization rejected
+  if (organization.status === 'rejected') {
+    return (
+      <div className="min-h-screen pt-6 pb-12">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-4 mb-8"
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate("/events")}
+              className="btn-outline-hero"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-glow">Organization Rejected</h1>
+              <p className="text-muted-foreground">Your organization application was not approved</p>
+            </div>
+          </motion.div>
+
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Your organization "<strong>{organization.name}</strong>" was not approved. Please contact support for more information.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
+  // Organization approved - show event creation form
   return (
     <div className="min-h-screen pt-6 pb-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -275,11 +403,7 @@ const CreateEvent = () => {
           <Button
             variant="outline"
             size="icon"
-<<<<<<< HEAD
-            onClick={() => navigate('/events')}
-=======
             onClick={() => navigate("/events")}
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
             className="btn-outline-hero"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -290,37 +414,25 @@ const CreateEvent = () => {
           </div>
         </motion.div>
 
+        <Alert className="mb-6">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            Creating event for approved organization: <strong>{organization.name}</strong>
+          </AlertDescription>
+        </Alert>
+
         <motion.form
-          onSubmit={handleSubmit}
+          onSubmit={handleEventSubmit}
           variants={containerVariants}
           initial="hidden"
           animate="visible"
           className="space-y-8"
         >
-<<<<<<< HEAD
-          {/* Event Banner */}
-=======
           {/* Banner Upload */}
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
           <motion.div variants={itemVariants}>
             <Card className="card-modern">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-<<<<<<< HEAD
-                  <Upload className="h-5 w-5 text-primary" />
-                  Event Banner
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
-                  {bannerPreview ? (
-                    <div className="relative">
-                      <img 
-                        src={bannerPreview} 
-                        alt="Banner preview" 
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-=======
                   <Upload className="h-5 w-5 text-primary" /> Event Banner
                 </CardTitle>
               </CardHeader>
@@ -329,7 +441,6 @@ const CreateEvent = () => {
                   {bannerPreview ? (
                     <div className="relative">
                       <img src={bannerPreview} alt="Banner preview" className="w-full h-48 object-cover rounded-lg" />
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
                       <Button
                         type="button"
                         variant="secondary"
@@ -337,11 +448,7 @@ const CreateEvent = () => {
                         className="absolute top-2 right-2"
                         onClick={() => {
                           setBannerPreview(null);
-<<<<<<< HEAD
-                          setFormData(prev => ({ ...prev, banner: null }));
-=======
-                          setFormData((prev) => ({ ...prev, banner: null }));
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
+                          setEventData((prev) => ({ ...prev, banner: null }));
                         }}
                       >
                         Remove
@@ -365,72 +472,38 @@ const CreateEvent = () => {
             </Card>
           </motion.div>
 
-<<<<<<< HEAD
           {/* Basic Information */}
-          <motion.div variants={itemVariants}>
-            <Card className="card-modern">
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Event Title *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    placeholder="Enter event title"
-                    required
-                    className="bg-background/50 border-border/50 focus:border-primary"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Describe your event..."
-                    rows={4}
-                    required
-                    className="bg-background/50 border-border/50 focus:border-primary"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                    <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-=======
-          {/* Title, Description, Category */}
           <motion.div variants={itemVariants}>
             <Card className="card-modern">
               <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="title">Event Title *</Label>
-                  <Input id="title" value={formData.title} onChange={(e) => handleInputChange("title", e.target.value)} required />
+                  <Input 
+                    id="title" 
+                    value={eventData.title} 
+                    onChange={(e) => handleEventInputChange("title", e.target.value)} 
+                    placeholder="Enter event title"
+                    required 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description *</Label>
-                  <Textarea id="description" value={formData.description} onChange={(e) => handleInputChange("description", e.target.value)} rows={4} required />
+                  <Textarea 
+                    id="description" 
+                    value={eventData.description} 
+                    onChange={(e) => handleEventInputChange("description", e.target.value)} 
+                    placeholder="Describe your event..."
+                    rows={4} 
+                    required 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+                  <Select value={eventData.category} onValueChange={(value) => handleEventInputChange("category", value)}>
                     <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                     <SelectContent>
                       {categories.map((cat) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
                     </SelectContent>
                   </Select>
                 </div>
@@ -438,54 +511,27 @@ const CreateEvent = () => {
             </Card>
           </motion.div>
 
-<<<<<<< HEAD
           {/* Date & Time */}
-          <motion.div variants={itemVariants}>
-            <Card className="card-modern">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  Date & Time
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="startDate">Start Date & Time *</Label>
-                    <Input
-                      id="startDate"
-                      type="datetime-local"
-                      value={formData.startDate}
-                      onChange={(e) => handleInputChange('startDate', e.target.value)}
-                      required
-                      className="bg-background/50 border-border/50 focus:border-primary"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endDate">End Date & Time *</Label>
-                    <Input
-                      id="endDate"
-                      type="datetime-local"
-                      value={formData.endDate}
-                      onChange={(e) => handleInputChange('endDate', e.target.value)}
-                      required
-                      className="bg-background/50 border-border/50 focus:border-primary"
-                    />
-                  </div>
-=======
-          {/* Dates */}
           <motion.div variants={itemVariants}>
             <Card className="card-modern">
               <CardHeader><CardTitle className="flex items-center gap-2"><Calendar className="h-5 w-5 text-primary" /> Date & Time</CardTitle></CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Start Date *</Label>
-                  <Input type="datetime-local" value={formData.start_date} onChange={(e) => handleInputChange("start_date", e.target.value)} required />
+                  <Input 
+                    type="datetime-local" 
+                    value={eventData.start_date} 
+                    onChange={(e) => handleEventInputChange("start_date", e.target.value)} 
+                    required 
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label>End Date *</Label>
-                  <Input type="datetime-local" value={formData.end_date} onChange={(e) => handleInputChange("end_date", e.target.value)} required />
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
+                  <Label>End Date</Label>
+                  <Input 
+                    type="datetime-local" 
+                    value={eventData.end_date} 
+                    onChange={(e) => handleEventInputChange("end_date", e.target.value)} 
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -494,182 +540,84 @@ const CreateEvent = () => {
           {/* Location & Contact */}
           <motion.div variants={itemVariants}>
             <Card className="card-modern">
-<<<<<<< HEAD
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  Location & Contact
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location *</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                    placeholder="e.g., Main Auditorium or Online"
-                    required
-                    className="bg-background/50 border-border/50 focus:border-primary"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="contactEmail">Contact Email *</Label>
-                    <Input
-                      id="contactEmail"
-                      type="email"
-                      value={formData.contactEmail}
-                      onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                      placeholder="contact@example.com"
-                      required
-                      className="bg-background/50 border-border/50 focus:border-primary"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="contactPhone">Contact Phone</Label>
-                    <Input
-                      id="contactPhone"
-                      type="tel"
-                      value={formData.contactPhone}
-                      onChange={(e) => handleInputChange('contactPhone', e.target.value)}
-                      placeholder="+91 98765 43210"
-                      className="bg-background/50 border-border/50 focus:border-primary"
-                    />
-=======
               <CardHeader><CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Location & Contact</CardTitle></CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label>Location *</Label>
-                  <Input value={formData.location} onChange={(e) => handleInputChange("location", e.target.value)} required />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Email *</Label>
-                    <Input type="email" value={formData.contact_email} onChange={(e) => handleInputChange("contact_email", e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Phone</Label>
-                    <Input type="tel" value={formData.contact_phone} onChange={(e) => handleInputChange("contact_phone", e.target.value)} />
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Registration & Pricing */}
-          <motion.div variants={itemVariants}>
-            <Card className="card-modern">
-<<<<<<< HEAD
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-primary" />
-                  Registration & Pricing
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="registrationLink">Registration Link</Label>
-                  <Input
-                    id="registrationLink"
-                    type="url"
-                    value={formData.registrationLink}
-                    onChange={(e) => handleInputChange('registrationLink', e.target.value)}
-                    placeholder="https://registration-link.com"
-                    className="bg-background/50 border-border/50 focus:border-primary"
+                  <Input 
+                    value={eventData.location} 
+                    onChange={(e) => handleEventInputChange("location", e.target.value)} 
+                    placeholder="Event location"
+                    required 
                   />
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="ticketPrice">Ticket Price (₹)</Label>
-                    <Input
-                      id="ticketPrice"
-                      type="number"
-                      value={formData.ticketPrice}
-                      onChange={(e) => handleInputChange('ticketPrice', e.target.value)}
-                      placeholder="0 for free events"
-                      min="0"
-                      className="bg-background/50 border-border/50 focus:border-primary"
+                    <Label>Contact Email *</Label>
+                    <Input 
+                      type="email"
+                      value={eventData.contact_email} 
+                      onChange={(e) => handleEventInputChange("contact_email", e.target.value)} 
+                      placeholder="contact@email.com"
+                      required 
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="maxParticipants">Max Participants *</Label>
-                    <Input
-                      id="maxParticipants"
-                      type="number"
-                      value={formData.maxParticipants}
-                      onChange={(e) => handleInputChange('maxParticipants', e.target.value)}
-                      placeholder="e.g., 100"
-                      required
-                      min="1"
-                      className="bg-background/50 border-border/50 focus:border-primary"
+                    <Label>Contact Phone</Label>
+                    <Input 
+                      type="tel"
+                      value={eventData.contact_phone} 
+                      onChange={(e) => handleEventInputChange("contact_phone", e.target.value)} 
+                      placeholder="+1234567890"
                     />
                   </div>
-=======
-              <CardHeader><CardTitle className="flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary" /> Registration & Pricing</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                </div>
                 <div className="space-y-2">
                   <Label>Registration Link</Label>
-                  <Input type="url" value={formData.registration_link} onChange={(e) => handleInputChange("registration_link", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Ticket Price (₹)</Label>
-                  <Input type="number" value={formData.ticket_price} onChange={(e) => handleInputChange("ticket_price", e.target.value)} min="0" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Max Participants *</Label>
-                  <Input type="number" value={formData.max_participants} onChange={(e) => handleInputChange("max_participants", e.target.value)} min="1" required />
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
+                  <Input 
+                    type="url"
+                    value={eventData.registration_link} 
+                    onChange={(e) => handleEventInputChange("registration_link", e.target.value)} 
+                    placeholder="https://registration-link.com"
+                  />
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
-<<<<<<< HEAD
+          {/* Pricing & Capacity */}
+          <motion.div variants={itemVariants}>
+            <Card className="card-modern">
+              <CardHeader><CardTitle className="flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary" /> Pricing & Capacity</CardTitle></CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Ticket Price</Label>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    value={eventData.ticket_price} 
+                    onChange={(e) => handleEventInputChange("ticket_price", e.target.value)} 
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Participants</Label>
+                  <Input 
+                    type="number"
+                    value={eventData.max_participants} 
+                    onChange={(e) => handleEventInputChange("max_participants", e.target.value)} 
+                    placeholder="100"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
           {/* Submit Button */}
-          <motion.div 
-            variants={itemVariants}
-            className="flex justify-end gap-4"
-          >
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate('/events')}
-              className="btn-outline-hero"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="btn-hero min-w-32"
-            >
-=======
-          {/* Submit */}
-          <motion.div variants={itemVariants} className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => navigate("/events")}>Cancel</Button>
-            <Button type="submit" disabled={isLoading}>
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  Creating...
-                </div>
-              ) : (
-<<<<<<< HEAD
-                <div className="flex items-center gap-2">
-                  <Save className="h-4 w-4" />
-                  Create Event
-                </div>
-=======
-                <>
-                  <Save className="h-4 w-4" /> Create Event
-                </>
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
-              )}
+          <motion.div variants={itemVariants} className="flex justify-end">
+            <Button type="submit" disabled={isLoading} className="btn-hero px-8">
+              <Save className="mr-2 h-4 w-4" />
+              {isLoading ? "Creating..." : "Create Event"}
             </Button>
           </motion.div>
         </motion.form>
@@ -678,8 +626,4 @@ const CreateEvent = () => {
   );
 };
 
-<<<<<<< HEAD
 export default CreateEvent;
-=======
-export default CreateEvent;
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
