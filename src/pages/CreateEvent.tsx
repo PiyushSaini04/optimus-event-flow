@@ -27,7 +27,6 @@ const CreateEvent = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [showOrgForm, setShowOrgForm] = useState(false);
   const [loadingOrg, setLoadingOrg] = useState(true);
 
   // Event form data
@@ -83,7 +82,7 @@ const CreateEvent = () => {
           throw error;
         }
 
-        setOrganization(data);
+        setOrganization(data || null);
         setLoadingOrg(false);
       } catch (error) {
         console.error('Error checking organization:', error);
@@ -122,7 +121,8 @@ const CreateEvent = () => {
         .insert({
           name: orgData.name,
           description: orgData.description,
-          owner_id: user?.id
+          owner_id: user?.id,
+          status: 'approved', // Auto-approve for instant event creation
         })
         .select()
         .single();
@@ -130,10 +130,9 @@ const CreateEvent = () => {
       if (error) throw error;
 
       setOrganization(data);
-      setShowOrgForm(false);
       toast({
         title: "Organization Registered!",
-        description: "Your organization is under review. Please wait for admin approval.",
+        description: "You can now create events.",
       });
     } catch (error) {
       console.error("Error creating organization:", error);
@@ -152,10 +151,10 @@ const CreateEvent = () => {
     setIsLoading(true);
 
     try {
-      if (!organization || organization.status !== 'approved') {
+      if (!organization) {
         toast({
-          title: "Organization Not Approved",
-          description: "Your organization must be approved before creating events.",
+          title: "No Organization Found",
+          description: "You must register an organization first.",
           variant: "destructive",
         });
         return;
@@ -268,11 +267,7 @@ const CreateEvent = () => {
             </div>
           </motion.div>
 
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
+          <motion.div variants={containerVariants} initial="hidden" animate="visible">
             <Alert className="mb-6">
               <Building2 className="h-4 w-4" />
               <AlertDescription>
@@ -321,76 +316,6 @@ const CreateEvent = () => {
     );
   }
 
-  // Organization pending approval
-  if (organization.status === 'pending') {
-    return (
-      <div className="min-h-screen pt-6 pb-12">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-4 mb-8"
-          >
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate("/events")}
-              className="btn-outline-hero"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-glow">Organization Under Review</h1>
-              <p className="text-muted-foreground">Your organization is being reviewed</p>
-            </div>
-          </motion.div>
-
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Your organization "<strong>{organization.name}</strong>" is under review. Please wait for admin approval before creating events.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    );
-  }
-
-  // Organization rejected
-  if (organization.status === 'rejected') {
-    return (
-      <div className="min-h-screen pt-6 pb-12">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-4 mb-8"
-          >
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate("/events")}
-              className="btn-outline-hero"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-glow">Organization Rejected</h1>
-              <p className="text-muted-foreground">Your organization application was not approved</p>
-            </div>
-          </motion.div>
-
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Your organization "<strong>{organization.name}</strong>" was not approved. Please contact support for more information.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    );
-  }
-
   // Organization approved - show event creation form
   return (
     <div className="min-h-screen pt-6 pb-12">
@@ -417,7 +342,7 @@ const CreateEvent = () => {
         <Alert className="mb-6">
           <CheckCircle className="h-4 w-4" />
           <AlertDescription>
-            Creating event for approved organization: <strong>{organization.name}</strong>
+            Creating event for organization: <strong>{organization.name}</strong>
           </AlertDescription>
         </Alert>
 
@@ -613,13 +538,9 @@ const CreateEvent = () => {
             </Card>
           </motion.div>
 
-          {/* Submit Button */}
-          <motion.div variants={itemVariants} className="flex justify-end">
-            <Button type="submit" disabled={isLoading} className="btn-hero px-8">
-              <Save className="mr-2 h-4 w-4" />
-              {isLoading ? "Creating..." : "Create Event"}
-            </Button>
-          </motion.div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Submitting..." : "Create Event"}
+          </Button>
         </motion.form>
       </div>
     </div>

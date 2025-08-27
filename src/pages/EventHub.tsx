@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-<<<<<<< HEAD
-import { Search, Filter, Calendar, Users, MapPin, Clock, Tag, Plus } from "lucide-react";
-=======
-import { Search, Filter, Calendar, Users, MapPin, Clock, Tag } from "lucide-react";
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
+import { Search, Filter, Calendar, Users, MapPin, Clock, Tag, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -13,43 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-<<<<<<< HEAD
-=======
-import { Link } from "react-router-dom";
-
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
 
 interface Event {
   id: string;
   title: string;
   description: string;
-<<<<<<< HEAD
-  start_date: string;
-  ticket_price: number | null;
-  max_participants: number;
-  banner_url: string | null;
-  created_by: string | null;
-  location: string;
-  category: string;
-  organizer_name: string;
-  profiles?: {
-    name: string;
-  } | null;
-=======
   category: string;
   start_date: string;
   end_date: string;
   location: string;
   organizer_name: string;
-  contact_email: string;
+  contact_email: string | null;
   contact_phone: string | null;
   registration_link: string | null;
-  max_participants: number;
+  max_participants: number | null;
   ticket_price: number | null;
   banner_url: string | null;
   created_by: string | null;
   created_at: string;
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
+  organization_id: string | null;
+  status: string;
 }
 
 const EventHub = () => {
@@ -57,102 +36,114 @@ const EventHub = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("approved");
   const [sortBy, setSortBy] = useState("date");
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
-  const [registrationCounts, setRegistrationCounts] = useState<{ [key: string]: number }>({});
-=======
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
 
-  const [stats, setStats] = useState([
-    { label: "Total Events", value: "0", icon: Calendar },
-    { label: "Active Participants", value: "0", icon: Users },
-    { label: "Free Events", value: "0", icon: Tag },
-    { label: "Categories", value: "0", icon: Filter }
-  ]);
-
-  const filters = [
+  const priceFilters = [
     { id: "all", label: "All Events" },
     { id: "free", label: "Free" },
     { id: "paid", label: "Paid" },
+  ];
+
+  const categoryFilters = [
+    { id: "all", label: "All Categories" },
     { id: "workshop", label: "Workshop" },
-    { id: "tech-talk", label: "Tech Talk" }
+    { id: "tech-talk", label: "Tech Talk" },
+    { id: "hackathon", label: "Hackathon" },
+    { id: "bootcamp", label: "Bootcamp" },
+    { id: "conference", label: "Conference" },
+    { id: "meetup", label: "Meetup" },
+  ];
+
+  const statusFilters = [
+    { id: "approved", label: "Approved Events" },
+    { id: "all", label: "All Events" },
+    { id: "pending", label: "Pending Approval" },
   ];
 
   useEffect(() => {
     fetchEvents();
-  }, [selectedFilter, searchQuery]);
+  }, [selectedFilter, categoryFilter, statusFilter, searchQuery, sortBy]);
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
       
+      // Base query - select all fields from events table
       let query = supabase
-        .from('events')
-<<<<<<< HEAD
+        .from("events")
         .select(`
-          *,
-          profiles(name)
-        `)
-        .order('start_date', { ascending: true });
+          id,
+          title,
+          description,
+          category,
+          start_date,
+          end_date,
+          location,
+          organizer_name,
+          contact_email,
+          contact_phone,
+          registration_link,
+          max_participants,
+          ticket_price,
+          banner_url,
+          created_by,
+          created_at,
+          organization_id,
+          status
+        `);
 
-      // Apply filters
-=======
-        .select('*')
-        .order('start_date', { ascending: true });
+      // Apply status filter
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
 
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
+      // Apply price filter
       if (selectedFilter === "free") {
-        query = query.is('ticket_price', null).or('ticket_price.eq.0');
+        query = query.or("ticket_price.is.null,ticket_price.eq.0");
       } else if (selectedFilter === "paid") {
-        query = query.gt('ticket_price', 0);
+        query = query.gt("ticket_price", 0);
       }
 
-<<<<<<< HEAD
-      // Apply search
-=======
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
-      if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      // Apply category filter
+      if (categoryFilter !== "all") {
+        query = query.ilike("category", `%${categoryFilter}%`);
       }
 
-      const { data: eventsData, error } = await query;
+      // Apply search filter
+      if (searchQuery.trim()) {
+        query = query.or(
+          `title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%,organizer_name.ilike.%${searchQuery}%,location.ilike.%${searchQuery}%`
+        );
+      }
 
+      // Apply sorting
+      if (sortBy === "date") {
+        query = query.order("start_date", { ascending: true });
+      } else if (sortBy === "created") {
+        query = query.order("created_at", { ascending: false });
+      } else if (sortBy === "title") {
+        query = query.order("title", { ascending: true });
+      }
+
+      const { data, error } = await query;
+      
       if (error) {
-<<<<<<< HEAD
+        console.error("Supabase error:", error);
         throw error;
       }
 
-      setEvents((eventsData || []) as unknown as Event[]);
-
-      // Simplify stats calculation - remove registration counts for now
-      const totalEvents = eventsData.length;
-      const freeEvents = eventsData.filter(event => !event.ticket_price || event.ticket_price === 0).length;
-      const categories = new Set(eventsData.map(event => event.category || 'Workshop')).size;
-=======
-        console.error("Supabase error:", error);
-      } else {
-        setEvents(eventsData as Event[]);
-      }
-
-      const totalEvents = eventsData?.length || 0;
-      const freeEvents = eventsData?.filter(event => !event.ticket_price || event.ticket_price === 0).length || 0;
-      const categories = new Set(eventsData?.map(event => event.category || 'Workshop')).size;
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
-
-      setStats([
-        { label: "Total Events", value: totalEvents.toString(), icon: Calendar },
-        { label: "Active Participants", value: "0", icon: Users },
-        { label: "Free Events", value: freeEvents.toString(), icon: Tag },
-        { label: "Categories", value: categories.toString(), icon: Filter }
-      ]);
+      console.log("Fetched events:", data); // Debug log
+      setEvents(data || []);
     } catch (error) {
-      console.error('Error fetching events:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load events. Please try again.",
-        variant: "destructive",
+      console.error("Error fetching events:", error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to fetch events. Please try again.", 
+        variant: "destructive" 
       });
     } finally {
       setLoading(false);
@@ -160,278 +151,321 @@ const EventHub = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric'
-    }).toUpperCase();
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", { 
+        month: "short", 
+        day: "numeric",
+        year: "numeric"
+      });
+    } catch {
+      return "Invalid Date";
+    }
   };
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString("en-US", { 
+        hour: "numeric", 
+        minute: "2-digit", 
+        hour12: true 
+      });
+    } catch {
+      return "Invalid Time";
+    }
   };
 
-<<<<<<< HEAD
   const getEventStatus = (event: Event) => {
     const now = new Date();
     const eventDate = new Date(event.start_date);
+    const endDate = new Date(event.end_date);
     
-    if (eventDate < now) {
-      return { status: "Event Ended", color: "bg-muted/20 text-muted-foreground border-muted/30" };
+    // First check database status
+    if (event.status !== "approved") {
+      return { 
+        status: event.status === "pending" ? "Pending Approval" : "Not Approved", 
+        color: "bg-yellow-100 text-yellow-700 border-yellow-300",
+        disabled: true
+      };
     }
     
-    // Simplified status logic without registration counts
-    return { status: "Open", color: "bg-success/20 text-success border-success/30" };
+    // Then check date-based status
+    if (now > endDate) {
+      return { 
+        status: "Event Ended", 
+        color: "bg-gray-100 text-gray-600 border-gray-300",
+        disabled: true
+      };
+    } else if (now >= eventDate && now <= endDate) {
+      return { 
+        status: "Live Now", 
+        color: "bg-red-100 text-red-700 border-red-300",
+        disabled: false
+      };
+    } else {
+      return { 
+        status: "Open", 
+        color: "bg-green-100 text-green-700 border-green-300",
+        disabled: false
+      };
+    }
   };
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
-      "Workshop": "bg-primary/20 text-primary",
-      "Tech Talk": "bg-success/20 text-success",
-      "Hackathon": "bg-warning/20 text-warning",
-      "Bootcamp": "bg-danger/20 text-danger"
+      workshop: "bg-blue-100 text-blue-700 border-blue-200",
+      "tech-talk": "bg-green-100 text-green-700 border-green-200",
+      hackathon: "bg-purple-100 text-purple-700 border-purple-200",
+      bootcamp: "bg-orange-100 text-orange-700 border-orange-200",
+      conference: "bg-indigo-100 text-indigo-700 border-indigo-200",
+      meetup: "bg-pink-100 text-pink-700 border-pink-200",
     };
-    return colors[category] || "bg-muted/20 text-muted-foreground";
+    return colors[category.toLowerCase()] || "bg-gray-100 text-gray-700 border-gray-200";
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: { [key: string]: string } = {
-      "Open": "bg-success/20 text-success border-success/30",
-      "Few Spots Left": "bg-warning/20 text-warning border-warning/30",
-      "Event Ended": "bg-muted/20 text-muted-foreground border-muted/30"
-    };
-    return colors[status] || "bg-muted/20 text-muted-foreground border-muted/30";
+  const handleEventClick = (eventId: string) => {
+    console.log("Navigating to event:", eventId);
+    navigate(`/events/${eventId}`);
+  };
+
+  const handleButtonClick = (e: React.MouseEvent, eventId: string) => {
+    e.stopPropagation();
+    handleEventClick(eventId);
   };
 
   return (
     <div className="min-h-screen pt-6">
-      {/* Header */}
-=======
-  return (
-    <div className="min-h-screen pt-6">
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 space-y-4 md:space-y-0">
-          <div>
-            <h1 className="text-4xl font-bold text-glow mb-2">Optimus Events Hub</h1>
-            <p className="text-muted-foreground text-lg">
-              Discover, participate, and organize cutting-edge technical events. 
-              Join the premier university tech club community.
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-glow mb-2">Optimus Events Hub</h1>
+          <p className="text-muted-foreground">Discover amazing events and join the community</p>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="space-y-4 mb-8">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search events by title, description, organizer, or location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-12"
+            />
+          </div>
+
+          {/* Filter Row */}
+          <div className="flex flex-wrap gap-4">
+            {/* Price Filters */}
+            <div className="flex gap-2">
+              {priceFilters.map((filter) => (
+                <Button
+                  key={filter.id}
+                  variant={selectedFilter === filter.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedFilter(filter.id)}
+                >
+                  {filter.label}
+                </Button>
+              ))}
+            </div>
+
+            {/* Category Filter */}
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryFilters.map((filter) => (
+                  <SelectItem key={filter.id} value={filter.id}>
+                    {filter.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusFilters.map((filter) => (
+                  <SelectItem key={filter.id} value={filter.id}>
+                    {filter.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Sort Filter */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Event Date</SelectItem>
+                <SelectItem value="created">Recently Added</SelectItem>
+                <SelectItem value="title">Title (A-Z)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Results Count */}
+        {!loading && (
+          <div className="mb-4">
+            <p className="text-sm text-muted-foreground">
+              {events.length} event{events.length !== 1 ? 's' : ''} found
             </p>
           </div>
-        </div>
+        )}
 
-        {/* Stats Section */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={stat.label} className="card-modern fade-up" style={{ animationDelay: `${index * 0.1}s` }}>
-              <CardContent className="p-6 text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/20 rounded-full mb-3">
-                  <stat.icon className="h-6 w-6 text-primary" />
-                </div>
-                <div className="text-2xl font-bold text-primary mb-1">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Search & Filters */}
-        <div className="bg-card/50 backdrop-blur-md rounded-xl border border-border/50 p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-              <div className="relative flex-1 lg:w-80">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search events..."
-                  className="pl-10 bg-background/50 border-border/50 focus:border-primary"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-4 w-full lg:w-auto">
-              <div className="flex flex-wrap gap-2 flex-1 lg:flex-initial">
-                {filters.map((filter) => (
-                  <Button
-                    key={filter.id}
-                    variant={selectedFilter === filter.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedFilter(filter.id)}
-                    className={selectedFilter === filter.id ? "btn-hero" : "btn-outline-hero"}
-                  >
-                    {filter.label}
-                  </Button>
-                ))}
-              </div>
-              
-              <div className="flex gap-2">
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-32 bg-background/50 border-border/50">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="date">Date</SelectItem>
-                    <SelectItem value="popularity">Popularity</SelectItem>
-                    <SelectItem value="price">Price</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Events Grid */}
+        {/* Loading State */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-            {[...Array(6)].map((_, index) => (
-              <Card key={index} className="card-modern overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, idx) => (
+              <Card key={idx} className="overflow-hidden">
                 <Skeleton className="h-48 w-full" />
-                <CardHeader className="pb-2">
+                <CardHeader className="space-y-2">
                   <Skeleton className="h-6 w-3/4" />
                   <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                  </div>
-                  <Skeleton className="h-10 w-full" />
+                <CardContent>
+                  <Skeleton className="h-8 w-full" />
                 </CardContent>
               </Card>
             ))}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-<<<<<<< HEAD
-            {events.map((event, index) => {
-              const { status, color } = getEventStatus(event);
-              
-              return (
-=======
-            {events.map((event, index) => (
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
-              <Card 
-                key={event.id} 
-                className="event-card fade-up overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300"
-                style={{ animationDelay: `${index * 0.1}s` }}
-<<<<<<< HEAD
-                onClick={() => navigate(`/events/${event.id}`)}
-=======
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
+        ) : events.length === 0 ? (
+          /* Empty State */
+          <div className="text-center py-16">
+            <Calendar className="h-20 w-20 text-muted-foreground mx-auto mb-6" />
+            <h3 className="text-2xl font-semibold mb-2">No events found</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              {searchQuery 
+                ? `No events match your search for "${searchQuery}". Try adjusting your filters or search term.`
+                : "No events match your current filters. Try adjusting the filters or check back later for new events."
+              }
+            </p>
+            <div className="flex gap-2 justify-center">
+              {searchQuery && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSearchQuery("")}
+                >
+                  Clear Search
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSelectedFilter("all");
+                  setCategoryFilter("all");
+                  setStatusFilter("approved");
+                  setSearchQuery("");
+                }}
               >
-                <div className="relative">
-                  <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                Reset All Filters
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* Events Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {events.map((event) => {
+              const { status, color, disabled } = getEventStatus(event);
+              return (
+                <Card
+                  key={event.id}
+                  className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all duration-200 overflow-hidden group"
+                  onClick={() => handleEventClick(event.id)}
+                >
+                  {/* Event Banner */}
+                  <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden relative">
                     {event.banner_url ? (
                       <img 
                         src={event.banner_url} 
                         alt={event.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                       />
                     ) : (
                       <Calendar className="h-16 w-16 text-primary/60" />
                     )}
-                  </div>
-                  
-                  {/* Date Badge */}
-                  <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2">
-                    <div className="text-sm font-bold text-primary">{formatDate(event.start_date)}</div>
-                  </div>
-                  
-                  {/* Price Badge */}
-                  {event.ticket_price && event.ticket_price > 0 && (
-                    <div className="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm rounded-lg px-3 py-2">
-                      <div className="text-sm font-bold text-primary-foreground">₹{event.ticket_price}</div>
-                    </div>
-                  )}
-                  
-                  <div className="absolute bottom-4 left-4">
-                    <Badge className="bg-primary/20 text-primary">
-                      {event.category || 'Workshop'}
-                    </Badge>
-                  </div>
-                </div>
-                
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-xl font-bold line-clamp-2">{event.title}</h3>
-                  </div>
-                  <p className="text-muted-foreground text-sm line-clamp-2">{event.description}</p>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      <span>{formatTime(event.start_date)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span className="truncate">{event.location || 'Online'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      <span>0{event.max_participants ? `/${event.max_participants}` : ''}</span>
-                    </div>
-<<<<<<< HEAD
-                    <div className="text-xs text-muted-foreground truncate">
-                      by {event.profiles?.name || event.organizer_name || 'Optimus Team'}
+                    {/* Status Badge Overlay */}
+                    <div className="absolute top-3 right-3">
+                      <Badge variant="secondary" className="bg-white/90 text-gray-700">
+                        {event.status}
+                      </Badge>
                     </div>
                   </div>
                   
-                  <div className="flex gap-2">
+                  {/* Event Content */}
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3 className="text-lg font-bold line-clamp-2 flex-1 group-hover:text-primary transition-colors">
+                        {event.title}
+                      </h3>
+                      <Badge 
+                        variant="outline" 
+                        className={`${getCategoryColor(event.category)} text-xs whitespace-nowrap`}
+                      >
+                        {event.category}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground text-sm line-clamp-2 leading-relaxed">
+                      {event.description}
+                    </p>
+                  </CardHeader>
+                  
+                  <CardContent className="pt-0">
+                    {/* Event Details */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4 flex-shrink-0" />
+                        <span>{formatDate(event.start_date)}</span>
+                        <Clock className="h-4 w-4 ml-2 flex-shrink-0" />
+                        <span>{formatTime(event.start_date)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 flex-shrink-0" />
+                        <span className="line-clamp-1">{event.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Building className="h-4 w-4 flex-shrink-0" />
+                        <span className="line-clamp-1">{event.organizer_name}</span>
+                      </div>
+                      {event.max_participants && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Users className="h-4 w-4 flex-shrink-0" />
+                          <span>Max {event.max_participants} participants</span>
+                        </div>
+                      )}
+                      {/* Price Display */}
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <Tag className="h-4 w-4 flex-shrink-0" />
+                        {event.ticket_price !== null && event.ticket_price > 0 ? (
+                          <span className="text-green-600">₹{event.ticket_price}</span>
+                        ) : (
+                          <span className="text-blue-600">Free</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Action Button */}
                     <Button 
-                      className="btn-hero flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/events/${event.id}`);
-                      }}
+                      className={`w-full ${color} hover:opacity-80 transition-opacity`}
+                      disabled={disabled}
+                      onClick={(e) => handleButtonClick(e, event.id)}
                     >
-                      View Details
+                      {disabled ? status : `${status} - View Details`}
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      className={`flex-1 ${color}`}
-                      disabled={status === "Event Ended"}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {status}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
+                  </CardContent>
+                </Card>
+              );
             })}
-=======
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button asChild>
-                      <Link to={`/events/${event.id}`}>View Details</Link>
-                  </Button>
-
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
-          </div>
-        )}
-        
-        {!loading && events.length === 0 && (
-          <div className="text-center py-12">
-            <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No events found</h3>
-            <p className="text-muted-foreground">
-              {selectedFilter === "all" ? "No events available at the moment." : `No ${selectedFilter} events found.`}
-            </p>
           </div>
         )}
       </div>
@@ -439,8 +473,4 @@ const EventHub = () => {
   );
 };
 
-<<<<<<< HEAD
 export default EventHub;
-=======
-export default EventHub;
->>>>>>> 0db5559 (Updated homepage with new sections and animations)
