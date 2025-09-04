@@ -14,6 +14,7 @@ import EventHub from "./pages/EventHub";
 import EventDetail from "./pages/EventDetail";
 import CreateEvent from "./pages/CreateEvent";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import Posts from "./pages/Posts";
 import Gallery from "./pages/Gallery";
 import Team from "./pages/Team";
@@ -48,10 +49,15 @@ const App = () => (
                       <Dashboard />
                     </ProtectedRoute>
                   } />
+                  <Route path="/admin" element={
+                    <ProtectedRoute>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/posts" element={<Posts />} />
                   <Route path="/gallery" element={<Gallery />} />
                   <Route path="/team" element={<Team />} />
-                  <Route path="/join" element={<JoinUs />} />
+                  <Route path="/join-us" element={<JoinUs />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

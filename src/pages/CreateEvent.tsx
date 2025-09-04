@@ -15,9 +15,11 @@ import { useAuth } from "@/components/AuthContext";
 
 interface Organization {
   id: string;
-  name: string;
+  name: string; 
   description: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: string;
+  created_at: string;
+  owner_id: string;
 }
 
 const CreateEvent = () => {

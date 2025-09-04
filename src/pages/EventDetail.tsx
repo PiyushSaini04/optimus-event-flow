@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import EventRegistrationModal from "@/components/EventRegistrationModal";
 import {
   Calendar,
   MapPin,
@@ -51,6 +52,7 @@ const EventDetail = () => {
   const { toast } = useToast();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
   const fetchEventDetails = async () => {
     try {
@@ -319,13 +321,22 @@ const EventDetail = () => {
                   </div>
                 </div>
                 
-                {event.registration_link && eventStatus.status !== "Event Ended" && (
+                <Button 
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-lg font-semibold"
+                  onClick={() => setShowRegistrationModal(true)}
+                  disabled={eventStatus.status === "Event Ended"}
+                >
+                  Register for Event
+                </Button>
+                
+                {event.registration_link && (
                   <Button 
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-lg font-semibold"
+                    variant="outline"
+                    className="w-full"
                     onClick={() => window.open(event.registration_link!, "_blank")}
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    Register Now
+                    External Registration
                   </Button>
                 )}
                 
@@ -681,6 +692,16 @@ const EventDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Registration Modal */}
+      {event && (
+        <EventRegistrationModal
+          isOpen={showRegistrationModal}
+          onClose={() => setShowRegistrationModal(false)}
+          eventId={event.id}
+          eventTitle={event.title}
+        />
+      )}
     </div>
   );
 };

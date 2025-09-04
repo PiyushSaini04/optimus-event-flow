@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter, Calendar, Users, MapPin, Clock, Tag, Building } from "lucide-react";
+import { Search, Filter, Calendar, Users, MapPin, Clock, Tag, Building, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthContext";
 
 interface Event {
   id: string;
@@ -34,6 +35,7 @@ interface Event {
 const EventHub = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -237,9 +239,17 @@ const EventHub = () => {
   return (
     <div className="min-h-screen pt-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-glow mb-2">Optimus Events Hub</h1>
-          <p className="text-muted-foreground">Discover amazing events and join the community</p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-bold text-glow mb-2">Optimus Events Hub</h1>
+            <p className="text-muted-foreground">Discover amazing events and join the community</p>
+          </div>
+          {user && (
+            <Button onClick={() => navigate('/create-event')} className="btn-hero">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Event
+            </Button>
+          )}
         </div>
 
         {/* Search and Filters */}

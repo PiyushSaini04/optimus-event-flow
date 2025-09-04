@@ -1,9 +1,11 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, Settings } from "lucide-react";
+import { Menu, X, User, LogOut, Settings, Shield } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "./AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +19,30 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { toast } = useToast();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("user_id", user.id)
+            .single();
+          
+          setIsAdmin(profile?.role === "admin");
+        } catch (error) {
+          console.error("Error checking admin status:", error);
+        }
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   const navItems = [
     { name: "Home", path: "/" },
@@ -25,8 +50,25 @@ const Navbar = () => {
     { name: "Posts", path: "/posts" },
     { name: "Gallery", path: "/gallery" },
     { name: "Team", path: "/team" },
-    { name: "Join Us", path: "/join" },
+    { name: "Join Us", path: "/join-us" },
   ];
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "See you next time!",
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Error signing out",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const isActive = (path: string) => {
     if (path === "/" && location.pathname === "/") return true;
@@ -91,6 +133,14 @@ const Navbar = () => {
                       <span>Dashboard</span>
                     </Link>
                   </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center">
+                        <Shield className="mr-2 h-4 w-4" />
+                        <span>Admin Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard" className="flex items-center">
                       <Settings className="mr-2 h-4 w-4" />
@@ -98,7 +148,7 @@ const Navbar = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()} className="flex items-center">
+                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
@@ -165,7 +215,12 @@ const Navbar = () => {
                   <Button asChild variant="outline" className="w-full">
                     <Link to="/dashboard" onClick={() => setIsOpen(false)}>Dashboard</Link>
                   </Button>
-                  <Button variant="outline" className="w-full" onClick={() => { signOut(); setIsOpen(false); }}>
+                  {isAdmin && (
+                    <Button asChild variant="outline" className="w-full">
+                      <Link to="/admin" onClick={() => setIsOpen(false)}>Admin Dashboard</Link>
+                    </Button>
+                  )}
+                  <Button variant="outline" className="w-full" onClick={() => { handleSignOut(); setIsOpen(false); }}>
                     Sign Out
                   </Button>
                 </div>
