@@ -27,9 +27,11 @@ export type Database = {
           id: string
           location: string
           max_participants: number
+          organization_id: string | null
           organizer_name: string
           registration_link: string | null
           start_date: string
+          status: string | null
           ticket_price: number | null
           title: string
         }
@@ -45,9 +47,11 @@ export type Database = {
           id?: string
           location: string
           max_participants: number
+          organization_id?: string | null
           organizer_name: string
           registration_link?: string | null
           start_date: string
+          status?: string | null
           ticket_price?: number | null
           title: string
         }
@@ -63,11 +67,48 @@ export type Database = {
           id?: string
           location?: string
           max_participants?: number
+          organization_id?: string | null
           organizer_name?: string
           registration_link?: string | null
           start_date?: string
+          status?: string | null
           ticket_price?: number | null
           title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          owner_id: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          owner_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string | null
+          status?: string | null
         }
         Relationships: []
       }
@@ -75,7 +116,9 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          location: string | null
           name: string
+          phone_number: string | null
           role: string
           updated_at: string
           user_id: string
@@ -83,7 +126,9 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          location?: string | null
           name: string
+          phone_number?: string | null
           role?: string
           updated_at?: string
           user_id: string
@@ -91,10 +136,54 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          location?: string | null
           name?: string
+          phone_number?: string | null
           role?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      Recruites: {
+        Row: {
+          Branch: string | null
+          "Course Year": string | null
+          created_at: string
+          Domain: string | null
+          Email: string | null
+          Gender: string | null
+          name: string
+          "Part of other organization": string | null
+          "Phone Number": number | null
+          Residence: string | null
+          WhatsApp: number | null
+        }
+        Insert: {
+          Branch?: string | null
+          "Course Year"?: string | null
+          created_at?: string
+          Domain?: string | null
+          Email?: string | null
+          Gender?: string | null
+          name: string
+          "Part of other organization"?: string | null
+          "Phone Number"?: number | null
+          Residence?: string | null
+          WhatsApp?: number | null
+        }
+        Update: {
+          Branch?: string | null
+          "Course Year"?: string | null
+          created_at?: string
+          Domain?: string | null
+          Email?: string | null
+          Gender?: string | null
+          name?: string
+          "Part of other organization"?: string | null
+          "Phone Number"?: number | null
+          Residence?: string | null
+          WhatsApp?: number | null
         }
         Relationships: []
       }
