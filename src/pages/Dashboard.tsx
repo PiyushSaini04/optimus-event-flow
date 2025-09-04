@@ -245,6 +245,17 @@ const Dashboard = () => {
                 <Plus className="h-4 w-4 mr-2" />
                 Create Event
               </Button>
+
+              {/* Show Admin/Organizer Dashboard Button */}
+              {(profile?.role === 'organiser' || profile?.role === 'admin') && (
+                <Button
+                  onClick={() => navigate('/admin-dashboard')}
+                  variant="secondary"
+                  className="ml-2"
+                >
+                  Admin Dashboard
+                </Button>
+              )}
             </div>
           </motion.div>
 
