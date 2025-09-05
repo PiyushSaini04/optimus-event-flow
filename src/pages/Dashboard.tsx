@@ -1,13 +1,28 @@
+import EditProfileModal from "@/components/EditProfileModal";
+// ...existing code...
 import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Download } from "lucide-react";
+import * as XLSX from "xlsx";
+interface EventRegistration {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  created_at: string;
+  event_id: string;
+  event?: { title: string };
+}
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { 
-  Calendar, 
-  Users, 
-  Tag, 
-  Filter, 
-  Plus, 
-  Settings, 
+import {
+  Calendar,
+  Users,
+  Tag,
+  Filter,
+  Plus,
+  Settings,
   Bell,
   Edit3,
   Trash2,
@@ -49,6 +64,70 @@ interface UserProfile {
 }
 
 const Dashboard = () => {
+  // ...existing code...
+
+  // Event registration modal state
+  const [selectedEventRegistrations, setSelectedEventRegistrations] = useState<EventRegistration[]>([]);
+  const [showRegistrations, setShowRegistrations] = useState(false);
+  const [selectedEventTitle, setSelectedEventTitle] = useState("");
+
+  const viewEventRegistrations = async (eventId: string, eventTitle: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("event_registrations")
+        .select("*")
+        .eq("event_id", eventId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setSelectedEventRegistrations(data || []);
+      setSelectedEventTitle(eventTitle);
+      setShowRegistrations(true);
+    } catch (error) {
+      console.error("Error fetching registrations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch registrations",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const downloadEventRegistrations = () => {
+    try {
+      const worksheet = XLSX.utils.json_to_sheet(selectedEventRegistrations);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "registrations");
+      XLSX.writeFile(workbook, `${selectedEventTitle}_registrations.xlsx`);
+      toast({
+        title: "Download Complete",
+        description: "Event registrations downloaded",
+      });
+    } catch (error) {
+      console.error("Error downloading registrations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download registrations",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateProfile = async (updatedProfile: { name: string; avatar_url: string | null }) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: updatedProfile.name, avatar_url: updatedProfile.avatar_url })
+        .eq('user_id', user.id);
+      if (error) throw error;
+      toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
+      fetchUserProfile();
+      setIsEditProfileModalOpen(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
+    }
+  };
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -61,6 +140,9 @@ const Dashboard = () => {
     activeEvents: 0,
     completedEvents: 0
   });
+
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+
 
   useEffect(() => {
     if (user) {
@@ -94,7 +176,7 @@ const Dashboard = () => {
 
     try {
       setLoading(true);
-      
+
       const { data: eventsData, error } = await supabase
         .from('events')
         .select('*')
@@ -106,12 +188,12 @@ const Dashboard = () => {
       }
 
       setEvents((eventsData || []) as Event[]);
-      
+
       // Calculate stats
       const now = new Date();
       const activeEvents = eventsData?.filter(event => new Date(event.start_date) > now).length || 0;
       const completedEvents = eventsData?.filter(event => new Date(event.start_date) < now).length || 0;
-      
+
       setStats({
         totalEvents: eventsData?.length || 0,
         totalParticipants: 0, // This would need to be calculated from registrations
@@ -235,12 +317,6 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="flex items-center space-x-4 mt-4 md:mt-0">
-              <Button variant="outline" size="icon">
-                <Bell className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon">
-                <Settings className="h-4 w-4" />
-              </Button>
               <Button onClick={() => navigate('/create-event')} className="btn-hero">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Event
@@ -275,13 +351,20 @@ const Dashboard = () => {
                     <p className="text-muted-foreground">{user?.email}</p>
                     <Badge className="mt-2">{profile?.role || 'Member'}</Badge>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => setIsEditProfileModalOpen(true)}>
                     <Edit3 className="h-4 w-4 mr-2" />
                     Edit Profile
                   </Button>
                 </div>
               </CardContent>
             </Card>
+            <EditProfileModal
+              isOpen={isEditProfileModalOpen}
+              onClose={() => setIsEditProfileModalOpen(false)}
+              user={user}
+              profile={profile ? { name: profile.name, avatar_url: (profile as any).avatar_url ?? null } : null}
+              onUpdateProfile={handleUpdateProfile}
+            />
           </motion.div>
 
           {/* Stats Grid */}
@@ -295,7 +378,7 @@ const Dashboard = () => {
                 <div className="text-sm text-muted-foreground">Total Events</div>
               </CardContent>
             </Card>
-            
+
             <Card className="card-modern">
               <CardContent className="p-6 text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-success/20 rounded-full mb-3">
@@ -305,7 +388,7 @@ const Dashboard = () => {
                 <div className="text-sm text-muted-foreground">Total Participants</div>
               </CardContent>
             </Card>
-            
+
             <Card className="card-modern">
               <CardContent className="p-6 text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-warning/20 rounded-full mb-3">
@@ -315,7 +398,7 @@ const Dashboard = () => {
                 <div className="text-sm text-muted-foreground">Active Events</div>
               </CardContent>
             </Card>
-            
+
             <Card className="card-modern">
               <CardContent className="p-6 text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-muted/20 rounded-full mb-3">
@@ -374,28 +457,22 @@ const Dashboard = () => {
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">
+
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => navigate(`/events/${event.id}`)}
+                            onClick={() => viewEventRegistrations(event.id, event.title)}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4 text-blue-500" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => navigate(`/create-event?edit=${event.id}`)}
+                            onClick={() => navigate(`/create-event`, { state: { eventData: event } })} // Pass event data for prefill
                           >
                             <Edit3 className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteEvent(event.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+
                         </div>
                       </div>
                     ))}
@@ -405,6 +482,40 @@ const Dashboard = () => {
             </Card>
           </motion.div>
         </motion.div>
+        {/* Event Registrations Modal */}
+        <Dialog open={showRegistrations} onOpenChange={setShowRegistrations}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Registrations for {selectedEventTitle}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Button onClick={downloadEventRegistrations} className="w-full">
+                <Download className="h-4 w-4 mr-2" />
+                Download Registrations Excel
+              </Button>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Registered</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedEventRegistrations.map((registration) => (
+                    <TableRow key={registration.id}>
+                      <TableCell>{registration.name}</TableCell>
+                      <TableCell>{registration.email}</TableCell>
+                      <TableCell>{registration.phone || "N/A"}</TableCell>
+                      <TableCell>{new Date(registration.created_at).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

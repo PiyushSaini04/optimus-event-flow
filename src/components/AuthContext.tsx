@@ -5,14 +5,14 @@ import { supabase } from '@/integrations/supabase/client';
 interface Profile {
   id: string;
   name: string;
-  role: 'user' | 'organiser';
+  role: 'user' | 'organiser' | 'admin';
 }
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
-  userRole: 'user' | 'organiser' | null;
+  userRole: 'user' | 'organiser' | 'admin' | null;
   loading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [userRole, setUserRole] = useState<'user' | 'organiser' | null>(null);
+  const [userRole, setUserRole] = useState<'user' | 'organiser' | 'admin' | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Function to fetch user profile and role

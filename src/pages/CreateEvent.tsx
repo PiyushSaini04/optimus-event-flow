@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthContext";
+import { useLocation } from "react-router-dom";
 
 interface Organization {
   id: string;
@@ -22,14 +23,36 @@ interface Organization {
   owner_id: string;
 }
 
+interface Event {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  start_date: string;
+  end_date: string;
+  location: string;
+  contact_email: string;
+  contact_phone: string | null;
+  registration_link: string | null;
+  ticket_price: number | null;
+  max_participants: number | null;
+  banner_url: string | null;
+  created_by: string | null;
+  organization_id: string;
+}
+
 const CreateEvent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const location = useLocation();
+  const editingEvent = location.state?.eventData as Event | undefined;
+
   const [isLoading, setIsLoading] = useState(false);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loadingOrg, setLoadingOrg] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Event form data
   const [eventData, setEventData] = useState({
@@ -46,6 +69,27 @@ const CreateEvent = () => {
     max_participants: "",
     banner: null as File | null,
   });
+
+  useEffect(() => {
+    if (editingEvent) {
+      setIsEditing(true);
+      setEventData({
+        title: editingEvent.title,
+        description: editingEvent.description,
+        category: editingEvent.category,
+        start_date: editingEvent.start_date.slice(0, 16),
+        end_date: editingEvent.end_date?.slice(0, 16) || "",
+        location: editingEvent.location,
+        contact_email: editingEvent.contact_email,
+        contact_phone: editingEvent.contact_phone || "",
+        registration_link: editingEvent.registration_link || "",
+        ticket_price: editingEvent.ticket_price?.toString() || "",
+        max_participants: editingEvent.max_participants?.toString() || "",
+        banner: null,
+      });
+      setBannerPreview(editingEvent.banner_url);
+    }
+  }, [editingEvent]);
 
   // Organization form data
   const [orgData, setOrgData] = useState({
@@ -77,14 +121,13 @@ const CreateEvent = () => {
         const { data, error } = await supabase
           .from('organizations')
           .select('*')
-          .eq('owner_id', user.id)
-          .single();
+          .eq('owner_id', user.id);
 
         if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
           throw error;
         }
 
-        setOrganization(data || null);
+        setOrganization(data?.[0] || null); // Assuming only one organization per user for now
         setLoadingOrg(false);
       } catch (error) {
         console.error('Error checking organization:', error);
@@ -124,7 +167,7 @@ const CreateEvent = () => {
           name: orgData.name,
           description: orgData.description,
           owner_id: user?.id,
-          status: 'approved', // Auto-approve for instant event creation
+          status: 'pending', // Default to pending status
         })
         .select()
         .single();
@@ -162,8 +205,7 @@ const CreateEvent = () => {
         return;
       }
 
-      // Upload banner if provided
-      let banner_url = null;
+      let banner_url = editingEvent?.banner_url || null;
       if (eventData.banner) {
         const fileExt = eventData.banner.name.split(".").pop();
         const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
@@ -181,8 +223,7 @@ const CreateEvent = () => {
         banner_url = data.publicUrl;
       }
 
-      // Insert event into database
-      const { error } = await supabase.from("events").insert({
+      const commonData = {
         title: eventData.title,
         description: eventData.description,
         category: eventData.category,
@@ -196,23 +237,41 @@ const CreateEvent = () => {
         ticket_price: eventData.ticket_price ? parseFloat(eventData.ticket_price) : null,
         max_participants: eventData.max_participants ? parseInt(eventData.max_participants) : null,
         banner_url,
-        organization_id: organization.id,
-        status: 'pending'
-      });
+      };
 
-      if (error) throw error;
+      if (isEditing && editingEvent) {
+        const { error } = await supabase
+          .from("events")
+          .update(commonData)
+          .eq("id", editingEvent.id);
 
-      toast({
-        title: "Event Submitted!",
-        description: "Your event request has been submitted. Please wait for admin approval.",
-      });
+        if (error) throw error;
 
-      navigate("/events");
+        toast({
+          title: "Event Updated!",
+          description: "Your event has been successfully updated.",
+        });
+      } else {
+        const { error } = await supabase.from("events").insert({
+          ...commonData,
+          organization_id: organization.id,
+          status: 'pending'
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Event Submitted!",
+          description: "Your event request has been submitted. Please wait for admin approval.",
+        });
+      }
+
+      navigate("/dashboard"); // Navigate to dashboard after submission/update
     } catch (error) {
-      console.error("Error creating event:", error);
+      console.error("Error submitting event:", error);
       toast({
         title: "Error",
-        description: "Failed to create event. Please try again.",
+        description: `Failed to ${isEditing ? "update" : "create"} event. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -246,7 +305,7 @@ const CreateEvent = () => {
   }
 
   // No organization - show registration form
-  if (!organization) {
+  if (!organization && !isEditing) { // Only show org registration if not editing an event
     return (
       <div className="min-h-screen pt-6 pb-12">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -330,24 +389,34 @@ const CreateEvent = () => {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => navigate("/events")}
+            onClick={() => navigate("/dashboard")}
             className="btn-outline-hero"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-glow">Create New Event</h1>
-            <p className="text-muted-foreground">Fill in the details to create your event</p>
+            <h1 className="text-3xl font-bold text-glow">{isEditing ? "Edit Event" : "Create New Event"}</h1>
+            <p className="text-muted-foreground">{isEditing ? "Update your event details" : "Fill in the details to create your event"}</p>
           </div>
         </motion.div>
 
-        <Alert className="mb-6">
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
-            Creating event for organization: <strong>{organization.name}</strong>
-          </AlertDescription>
-        </Alert>
-
+        {organization && organization.status === "pending" && (
+          <Alert className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Your organization <strong>{organization.name}</strong> is pending approval. You can create/edit events, but they will only be visible once your organization is approved.
+            </AlertDescription>
+          </Alert>
+        )}
+        {organization && organization.status === "approved" && (
+          <Alert className="mb-6">
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription>
+              Creating event for organization: <strong>{organization.name}</strong>
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <motion.form
           onSubmit={handleEventSubmit}
           variants={containerVariants}
@@ -541,7 +610,7 @@ const CreateEvent = () => {
           </motion.div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Submitting..." : "Create Event"}
+            {isLoading ? (isEditing ? "Updating..." : "Submitting...") : (isEditing ? "Update Event" : "Create Event")}
           </Button>
         </motion.form>
       </div>

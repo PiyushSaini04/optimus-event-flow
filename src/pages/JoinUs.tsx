@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const JoinUs = () => {
   const { toast } = useToast();
@@ -27,31 +28,35 @@ const JoinUs = () => {
     lpuParticipation: "",
     motivation: ""
   });
+  const [loading, setLoading] = useState(false);
 
   const domains = [
-    "Web Development",
-    "Mobile App Development", 
-    "Data Science & Analytics",
-    "Artificial Intelligence",
-    "Machine Learning",
-    "Cybersecurity",
-    "Cloud Computing",
-    "DevOps",
-    "Blockchain",
-    "IoT",
-    "Game Development",
-    "UI/UX Design"
+    "Graphic Designing & Video Editing",
+    "Social Media", 
+    "Content Writing",
+    "Technical team",
+    "Event Management",
+    "Marketing & PR",
+    "Public Speaking",
+    "Aerospace",
+    "Photography",
+    "Human Resources",
+    "Public Relations"
   ];
 
   const branches = [
-    "Computer Science & Engineering",
-    "Information Technology",
-    "Electronics & Communication",
-    "Electrical Engineering",
-    "Mechanical Engineering",
-    "Civil Engineering",
-    "Chemical Engineering",
-    "Biotechnology",
+    "B Tech",
+    "B.Sc",
+    "BBA",
+    "BA",
+    "BCA",
+    "LLB",
+    "B.Ed",
+    "B.Arch",
+    "B.Des",
+    "B.Pharm",
+    "BHMCT",
+    "BFA",
     "Other"
   ];
 
@@ -68,30 +73,56 @@ const JoinUs = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 2. Update handleSubmit for Supabase integration
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock form submission
-    toast({
-      title: "Application Submitted!",
-      description: "Thank you for your interest in joining Optimus. We'll review your application and get back to you soon.",
-    });
-    
-    // Reset form
-    setFormData({
-      name: "",
-      regNo: "",
-      whatsapp: "",
-      email: "",
-      phone: "",
-      branch: "",
-      dob: "",
-      gender: "",
-      residence: "",
-      courseYear: "",
-      domains: [],
-      lpuParticipation: "",
-      motivation: ""
-    });
+    setLoading(true);
+    try {
+      const { error } = await supabase.from("optimus_applications").insert({
+        full_name: formData.name,
+        registration_number: formData.regNo,
+        email: formData.email,
+        phone_number: formData.phone,
+        whatsapp_number: formData.whatsapp,
+        date_of_birth: formData.dob,
+        gender: formData.gender,
+        residence: formData.residence,
+        branch: formData.branch,
+        course_year: formData.courseYear,
+        areas_of_interest: formData.domains, // text[]
+        participated_before: formData.lpuParticipation === "yes",
+        motivation: formData.motivation
+      });
+      if (error) throw error;
+      toast({
+        title: "Application Submitted!",
+        description: "Thank you for your interest in joining Optimus. We'll review your application and get back to you soon.",
+      });
+      // 5. Reset all form fields
+      setFormData({
+        name: "",
+        regNo: "",
+        whatsapp: "",
+        email: "",
+        phone: "",
+        branch: "",
+        dob: "",
+        gender: "",
+        residence: "",
+        courseYear: "",
+        domains: [],
+        lpuParticipation: "",
+        motivation: ""
+      });
+    } catch (error: any) {
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -257,16 +288,16 @@ const JoinUs = () => {
                       className="flex gap-6 mt-2"
                     >
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="male" id="male" />
-                        <Label htmlFor="male">Male</Label>
+                        <RadioGroupItem value="Male" id="Male" />
+                        <Label htmlFor="Male">Male</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="female" id="female" />
-                        <Label htmlFor="female">Female</Label>
+                        <RadioGroupItem value="Female" id="Female" />
+                        <Label htmlFor="Female">Female</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="other" id="other" />
-                        <Label htmlFor="other">Other</Label>
+                        <RadioGroupItem value="Other" id="Other" />
+                        <Label htmlFor="Other">Other</Label>
                       </div>
                     </RadioGroup>
                   </div>
@@ -277,7 +308,7 @@ const JoinUs = () => {
                       <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="residence"
-                        placeholder="City, State"
+                        placeholder="Day Scholar /Hostel (Mention hostel)"
                         className="pl-10 bg-muted/20 border-border/50 focus:border-primary"
                         value={formData.residence}
                         onChange={(e) => handleInputChange("residence", e.target.value)}
@@ -385,9 +416,9 @@ const JoinUs = () => {
                 <Button 
                   type="submit" 
                   className="btn-hero text-lg px-12 py-3"
-                  disabled={formData.domains.length < 3}
+                  disabled={loading || formData.domains.length < 3}
                 >
-                  Submit Application
+                  {loading ? "Submitting..." : "Submit Application"}
                 </Button>
                 <p className="text-xs text-muted-foreground mt-3">
                   By submitting this form, you agree to our terms and conditions.

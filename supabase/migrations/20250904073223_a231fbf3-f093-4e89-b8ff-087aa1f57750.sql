@@ -165,3 +165,15 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
+
+-- Ensure organizer_name and end_date columns exist in events table
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='events' AND column_name='organizer_name') THEN
+    ALTER TABLE public.events ADD COLUMN organizer_name text NOT NULL DEFAULT 'Optimus Team';
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='events' AND column_name='end_date') THEN
+    ALTER TABLE public.events ADD COLUMN end_date timestamp with time zone;
+  END IF;
+END $$;

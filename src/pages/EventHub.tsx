@@ -38,8 +38,7 @@ const EventHub = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("approved");
+  // Removed categoryFilter
   const [sortBy, setSortBy] = useState("date");
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,30 +49,18 @@ const EventHub = () => {
     { id: "paid", label: "Paid" },
   ];
 
-  const categoryFilters = [
-    { id: "all", label: "All Categories" },
-    { id: "workshop", label: "Workshop" },
-    { id: "tech-talk", label: "Tech Talk" },
-    { id: "hackathon", label: "Hackathon" },
-    { id: "bootcamp", label: "Bootcamp" },
-    { id: "conference", label: "Conference" },
-    { id: "meetup", label: "Meetup" },
-  ];
+  // Removed categoryFilters
 
-  const statusFilters = [
-    { id: "approved", label: "Approved Events" },
-    { id: "all", label: "All Events" },
-    { id: "pending", label: "Pending Approval" },
-  ];
+  // Removed statusFilters
 
   useEffect(() => {
     fetchEvents();
-  }, [selectedFilter, categoryFilter, statusFilter, searchQuery, sortBy]);
+  }, [selectedFilter, searchQuery, sortBy]);
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      
+
       // Base query - select all fields from events table
       let query = supabase
         .from("events")
@@ -98,10 +85,7 @@ const EventHub = () => {
           status
         `);
 
-      // Apply status filter
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
+      // Removed status filter
 
       // Apply price filter
       if (selectedFilter === "free") {
@@ -110,10 +94,7 @@ const EventHub = () => {
         query = query.gt("ticket_price", 0);
       }
 
-      // Apply category filter
-      if (categoryFilter !== "all") {
-        query = query.ilike("category", `%${categoryFilter}%`);
-      }
+      // Removed category filter
 
       // Apply search filter
       if (searchQuery.trim()) {
@@ -132,7 +113,7 @@ const EventHub = () => {
       }
 
       const { data, error } = await query;
-      
+
       if (error) {
         console.error("Supabase error:", error);
         throw error;
@@ -142,10 +123,10 @@ const EventHub = () => {
       setEvents(data || []);
     } catch (error) {
       console.error("Error fetching events:", error);
-      toast({ 
-        title: "Error", 
-        description: "Failed to fetch events. Please try again.", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: "Failed to fetch events. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -155,8 +136,8 @@ const EventHub = () => {
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", { 
-        month: "short", 
+      return date.toLocaleDateString("en-US", {
+        month: "short",
         day: "numeric",
         year: "numeric"
       });
@@ -168,10 +149,10 @@ const EventHub = () => {
   const formatTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleTimeString("en-US", { 
-        hour: "numeric", 
-        minute: "2-digit", 
-        hour12: true 
+      return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
       });
     } catch {
       return "Invalid Time";
@@ -182,32 +163,32 @@ const EventHub = () => {
     const now = new Date();
     const eventDate = new Date(event.start_date);
     const endDate = new Date(event.end_date);
-    
+
     // First check database status
     if (event.status !== "approved") {
-      return { 
-        status: event.status === "pending" ? "Pending Approval" : "Not Approved", 
+      return {
+        status: event.status === "pending" ? "Pending Approval" : "Not Approved",
         color: "bg-yellow-100 text-yellow-700 border-yellow-300",
         disabled: true
       };
     }
-    
+
     // Then check date-based status
     if (now > endDate) {
-      return { 
-        status: "Event Ended", 
+      return {
+        status: "Event Ended",
         color: "bg-gray-100 text-gray-600 border-gray-300",
         disabled: true
       };
     } else if (now >= eventDate && now <= endDate) {
-      return { 
-        status: "Live Now", 
+      return {
+        status: "Live Now",
         color: "bg-red-100 text-red-700 border-red-300",
         disabled: false
       };
     } else {
-      return { 
-        status: "Open", 
+      return {
+        status: "Open",
         color: "bg-green-100 text-green-700 border-green-300",
         disabled: false
       };
@@ -281,33 +262,9 @@ const EventHub = () => {
               ))}
             </div>
 
-            {/* Category Filter */}
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categoryFilters.map((filter) => (
-                  <SelectItem key={filter.id} value={filter.id}>
-                    {filter.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Removed category filter UI */}
 
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusFilters.map((filter) => (
-                  <SelectItem key={filter.id} value={filter.id}>
-                    {filter.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Removed status filter UI */}
 
             {/* Sort Filter */}
             <Select value={sortBy} onValueChange={setSortBy}>
@@ -355,26 +312,24 @@ const EventHub = () => {
             <Calendar className="h-20 w-20 text-muted-foreground mx-auto mb-6" />
             <h3 className="text-2xl font-semibold mb-2">No events found</h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              {searchQuery 
+              {searchQuery
                 ? `No events match your search for "${searchQuery}". Try adjusting your filters or search term.`
                 : "No events match your current filters. Try adjusting the filters or check back later for new events."
               }
             </p>
             <div className="flex gap-2 justify-center">
               {searchQuery && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setSearchQuery("")}
                 >
                   Clear Search
                 </Button>
               )}
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setSelectedFilter("all");
-                  setCategoryFilter("all");
-                  setStatusFilter("approved");
                   setSearchQuery("");
                 }}
               >
@@ -396,30 +351,24 @@ const EventHub = () => {
                   {/* Event Banner */}
                   <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden relative">
                     {event.banner_url ? (
-                      <img 
-                        src={event.banner_url} 
+                      <img
+                        src={event.banner_url}
                         alt={event.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <Calendar className="h-16 w-16 text-primary/60" />
                     )}
-                    {/* Status Badge Overlay */}
-                    <div className="absolute top-3 right-3">
-                      <Badge variant="secondary" className="bg-white/90 text-gray-700">
-                        {event.status}
-                      </Badge>
-                    </div>
                   </div>
-                  
+
                   {/* Event Content */}
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <h3 className="text-lg font-bold line-clamp-2 flex-1 group-hover:text-primary transition-colors">
                         {event.title}
                       </h3>
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={`${getCategoryColor(event.category)} text-xs whitespace-nowrap`}
                       >
                         {event.category}
@@ -429,7 +378,7 @@ const EventHub = () => {
                       {event.description}
                     </p>
                   </CardHeader>
-                  
+
                   <CardContent className="pt-0">
                     {/* Event Details */}
                     <div className="space-y-2 mb-4">
@@ -463,9 +412,9 @@ const EventHub = () => {
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Action Button */}
-                    <Button 
+                    <Button
                       className={`w-full ${color} hover:opacity-80 transition-opacity`}
                       disabled={disabled}
                       onClick={(e) => handleButtonClick(e, event.id)}

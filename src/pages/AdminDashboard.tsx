@@ -45,7 +45,7 @@ interface UserProfile {
 interface Organization {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   status: string;
   owner_id: string;
   created_at: string;
@@ -60,6 +60,17 @@ interface Event {
   start_date: string;
   organiser_name: string;
   organization_id: string;
+  organization?: { name: string };
+  category: string;
+  end_date: string;
+  location: string;
+  contact_email: string;
+  contact_phone?: string;
+  max_participants?: number;
+  registration_link?: string;
+  ticket_price?: number;
+  banner_url?: string;
+  description: string;
 }
 
 interface EventRegistration {
@@ -117,6 +128,8 @@ const AdminDashboard = () => {
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [showAddGalleryItemModal, setShowAddGalleryItemModal] = useState(false);
   const [newGalleryItem, setNewGalleryItem] = useState({ title: "", image_url: "" });
+  const [showConfirmRoleChangeModal, setShowConfirmRoleChangeModal] = useState(false);
+  const [userToChangeRole, setUserToChangeRole] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     console.log("AdminDashboard: authLoading changed:", authLoading);
@@ -168,7 +181,7 @@ const AdminDashboard = () => {
   const fetchUserProfiles = async () => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, name, role, user_id, created_at, email:auth.users(email)")
+      .select("id, name, role, user_id, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -178,7 +191,7 @@ const AdminDashboard = () => {
 
     // Get user emails from auth.users (if available)
     const profilesWithEmail = await Promise.all(
-      (data || []).map(async (profile) => {
+      (data || []).map(async (profile: UserProfile) => {
         try {
           const { data: userData } = await supabase.auth.admin.getUserById(profile.user_id);
           return { ...profile, email: userData?.user?.email };
@@ -196,66 +209,65 @@ const AdminDashboard = () => {
       .from("organizations")
       .select("*")
       .order("created_at", { ascending: false });
-
+  
     if (error) {
-      console.error("Error fetching organizations:", error);
-      return;
+      console.error("Error fetching organizations:", error.message);
+    } else {
+      setOrganizations(data || []);
     }
-
-    setOrganizations(data || []);
   };
+  
 
   const fetchEvents = async () => {
     const { data, error } = await supabase
       .from("events")
-      .select("*")
+      .select("id, title, category, start_date, end_date, location, organizer_name, status, organizations(name)")
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching events:", error);
       return;
     }
-
-    setEvents(data || []);
+    setEvents((data as unknown as Event[]) || []);
   };
 
   const fetchTeamMembers = async () => {
     const { data, error } = await supabase
       .from("team")
-      .select("*")
+      .select("id, name, role, email, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching team members:", error);
       return;
     }
-    setTeamMembers(data || []);
+    setTeamMembers((data as TeamMember[]) || []);
   };
 
   const fetchPosts = async () => {
     const { data, error } = await supabase
       .from("posts")
-      .select("*")
+      .select("id, title, content, author_id, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching posts:", error);
       return;
     }
-    setPosts(data || []);
+    setPosts((data as Post[]) || []);
   };
 
   const fetchGalleryItems = async () => {
     const { data, error } = await supabase
       .from("gallery")
-      .select("*")
+      .select("id, title, image_url, created_at")
       .order("created_at", { ascending: false });
     
     if (error) {
       console.error("Error fetching gallery items:", error);
       return;
     }
-    setGalleryItems(data || []);
+    setGalleryItems((data as GalleryItem[]) || []);
   };
 
   const addPost = async (e: React.FormEvent) => {
@@ -630,7 +642,6 @@ const AdminDashboard = () => {
     { id: "team", label: "Team", icon: User },
     { id: "posts", label: "Posts", icon: MessageSquare },
     { id: "gallery", label: "Gallery", icon: Image },
-    { id: "data", label: "Download Data", icon: Download },
   ];
 
   return (
@@ -670,8 +681,17 @@ const AdminDashboard = () => {
           {/* Organizations Tab */}
           {activeTab === "organizations" && (
             <Card>
-              <CardHeader>
-                <CardTitle>Organizations Management</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-2xl font-bold">Organizations Management</CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadTable("organizations")}
+                  className="ml-auto"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Organizations Excel
+                </Button>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -679,6 +699,7 @@ const AdminDashboard = () => {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Owner</TableHead>
+                      <TableHead>Description</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead>Actions</TableHead>
@@ -689,6 +710,7 @@ const AdminDashboard = () => {
                       <TableRow key={org.id}>
                         <TableCell className="font-medium">{org.name}</TableCell>
                         <TableCell>Owner ID: {org.owner_id.slice(0, 8)}...</TableCell>
+                        <TableCell>{org.description || "N/A"}</TableCell>
                         <TableCell>
                           <Badge
                             variant={
@@ -735,15 +757,26 @@ const AdminDashboard = () => {
           {/* Events Tab */}
           {activeTab === "events" && (
             <Card>
-              <CardHeader>
-                <CardTitle>Events Management</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-2xl font-bold">Events Management</CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadTable("events")}
+                  className="ml-auto"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Events Excel
+                </Button>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Title</TableHead>
-                      <TableHead>Organiser</TableHead>
+                      <TableHead>Organization</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Location</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Actions</TableHead>
@@ -753,7 +786,9 @@ const AdminDashboard = () => {
                     {events.map((event) => (
                       <TableRow key={event.id}>
                         <TableCell className="font-medium">{event.title}</TableCell>
-                        <TableCell>{event.organiser_name}</TableCell>
+                        <TableCell>{event.organization?.name || "N/A"}</TableCell>
+                        <TableCell>{event.category}</TableCell>
+                        <TableCell>{event.location}</TableCell>
                         <TableCell>
                           <Badge
                             variant={
@@ -807,8 +842,17 @@ const AdminDashboard = () => {
           {/* Users Tab */}
           {activeTab === "users" && (
             <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-2xl font-bold">User Management</CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadTable("profiles")}
+                  className="ml-auto"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Users Excel
+                </Button>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -818,7 +862,6 @@ const AdminDashboard = () => {
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Joined</TableHead>
-                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -830,28 +873,21 @@ const AdminDashboard = () => {
                           <Badge variant={profile.role === "organiser" ? "default" : "secondary"}>
                             {profile.role}
                           </Badge>
+                          {profile.role === "user" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="ml-2"
+                              onClick={() => {
+                                setUserToChangeRole(profile);
+                                setShowConfirmRoleChangeModal(true);
+                              }}
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" /> Make Organiser
+                            </Button>
+                          )}
                         </TableCell>
                         <TableCell>{new Date(profile.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            {profile.role === "user" ? (
-                              <Button
-                                size="sm"
-                                onClick={() => updateUserRole(profile.user_id, "organiser")}x
-                              >
-                                <UserPlus className="h-4 w-4" />
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateUserRole(profile.user_id, "user")}
-                              >
-                                <UserMinus className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -863,8 +899,17 @@ const AdminDashboard = () => {
           {/* Team Tab */}
           {activeTab === "team" && (
             <Card>
-              <CardHeader>
-                <CardTitle>Team Management</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-2xl font-bold">Team Management</CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadTable("team")}
+                  className="ml-auto"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Team Members Excel
+                </Button>
               </CardHeader>
               <CardContent>
                 <Button className="mb-4" onClick={() => setShowAddTeamMemberModal(true)}>
@@ -909,8 +954,17 @@ const AdminDashboard = () => {
           {/* Posts Tab */}
           {activeTab === "posts" && (
             <Card>
-              <CardHeader>
-                <CardTitle>Posts Management</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-2xl font-bold">Posts Management</CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadTable("posts")}
+                  className="ml-auto"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Posts Excel
+                </Button>
               </CardHeader>
               <CardContent>
                 <Button className="mb-4" onClick={() => { setShowAddPostModal(true); setEditingPost(null); setNewPost({ title: "", content: "" }); }}>
@@ -966,8 +1020,17 @@ const AdminDashboard = () => {
           {/* Gallery Tab */}
           {activeTab === "gallery" && (
             <Card>
-              <CardHeader>
-                <CardTitle>Gallery Management</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-2xl font-bold">Gallery Management</CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadTable("gallery")}
+                  className="ml-auto"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Gallery Excel
+                </Button>
               </CardHeader>
               <CardContent>
                 <Button className="mb-4" onClick={() => { setShowAddGalleryItemModal(true); setNewGalleryItem({ title: "", image_url: "" }); }}>
@@ -1003,36 +1066,6 @@ const AdminDashboard = () => {
                 </Table>
               </CardContent>
             </Card>
-          )}
-
-          {/* Download Data Tab */}
-          {activeTab === "data" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[
-                { name: "profiles", label: "User Profiles" },
-                { name: "organizations", label: "Organizations" },
-                { name: "events", label: "Events" },
-                { name: "event_registrations", label: "Event Registrations" },
-                { name: "team", label: "Team Members" },
-                { name: "posts", label: "Posts" },
-                { name: "gallery", label: "Gallery Items" },
-              ].map((table) => (
-                <Card key={table.name}>
-                  <CardHeader>
-                    <CardTitle>{table.label}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Button
-                      onClick={() => downloadTable(table.name)}
-                      className="w-full"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download {table.label} Excel
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           )}
         </motion.div>
 
@@ -1082,6 +1115,32 @@ const AdminDashboard = () => {
                 <Button type="submit">Add Member</Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirm Role Change Modal */}
+        <Dialog open={showConfirmRoleChangeModal} onOpenChange={setShowConfirmRoleChangeModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Role Change</DialogTitle>
+              <DialogDescription>
+                This user ({userToChangeRole?.name}) will have access to the website as an Organiser. Do you want to continue?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowConfirmRoleChangeModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={async () => {
+                if (userToChangeRole) {
+                  await updateUserRole(userToChangeRole.user_id, "organiser");
+                  setShowConfirmRoleChangeModal(false);
+                  setUserToChangeRole(null);
+                }
+              }}>
+                Allow
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
