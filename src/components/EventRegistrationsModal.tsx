@@ -43,8 +43,8 @@ const EventRegistrationsModal: React.FC<EventRegistrationsModalProps> = ({
 
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.95 },
-    visible: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: "easeOut" } },
-    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2, ease: "easeIn" } },
+    visible: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.95 },
   };
 
   const { toast } = useToast();
