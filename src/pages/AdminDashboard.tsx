@@ -19,12 +19,16 @@ import {
   ImagePlus,
   ImageMinus,
   Image,
+  Filter,
+  PowerOff,
+  Power,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +36,8 @@ import * as XLSX from "xlsx";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import EventRegistrationsModal from "@/components/EventRegistrationsModal";
 
 interface UserProfile {
   id: string;
@@ -58,7 +64,7 @@ interface Event {
   created_by: string;
   created_at: string;
   start_date: string;
-  organiser_name: string;
+  organizer_name: string;
   organization_id: string;
   organization?: { name: string };
   category: string;
@@ -83,27 +89,23 @@ interface EventRegistration {
   event?: { title: string };
 }
 
-interface TeamMember {
+interface OptimusApplication {
   id: string;
-  name: string;
-  role: string;
+  full_name: string;
   email: string;
+  phone_number: string;
+  registration_number: string;
+  branch: string;
+  course_year: string;
+  areas_of_interest: string[];
+  participated_before: boolean;
+  action: string;
   created_at: string;
-}
-
-interface Post {
-  id: string;
-  title: string;
-  content: string;
-  author_id: string;
-  created_at: string;
-}
-
-interface GalleryItem {
-  id: string;
-  title: string;
-  image_url: string;
-  created_at: string;
+  date_of_birth: string;
+  gender?: string;
+  residence: string;
+  motivation: string;
+  whatsapp_number?: string;
 }
 
 const AdminDashboard = () => {
@@ -111,36 +113,38 @@ const AdminDashboard = () => {
   const { toast } = useToast();
   const { user, userRole, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("organizations");
+  const [activeTab, setActiveTab] = useState("recruitment");
   const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+  const [optimusApplications, setOptimusApplications] = useState<OptimusApplication[]>([]);
+  const [filteredApplications, setFilteredApplications] = useState<OptimusApplication[]>([]);
   const [selectedEventRegistrations, setSelectedEventRegistrations] = useState<EventRegistration[]>([]);
   const [showRegistrations, setShowRegistrations] = useState(false);
   const [selectedEventTitle, setSelectedEventTitle] = useState("");
-  const [showAddTeamMemberModal, setShowAddTeamMemberModal] = useState(false);
-  const [newTeamMember, setNewTeamMember] = useState({ name: "", email: "", role: "member" });
-  const [showAddPostModal, setShowAddPostModal] = useState(false);
-  const [newPost, setNewPost] = useState({ title: "", content: "" });
-  const [editingPost, setEditingPost] = useState<Post | null>(null);
-  const [showAddGalleryItemModal, setShowAddGalleryItemModal] = useState(false);
-  const [newGalleryItem, setNewGalleryItem] = useState({ title: "", image_url: "" });
-  const [showConfirmRoleChangeModal, setShowConfirmRoleChangeModal] = useState(false);
-  const [userToChangeRole, setUserToChangeRole] = useState<UserProfile | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [joinFormActive, setJoinFormActive] = useState(true);
+  
+  // Filter states
+  const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [branchFilter, setBranchFilter] = useState("all");
+
+  // Modals
+  const [showChangeStatusModal, setShowChangeStatusModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<OptimusApplication | null>(null);
 
   useEffect(() => {
-    console.log("AdminDashboard: authLoading changed:", authLoading);
     if (!authLoading) {
-      console.log("AdminDashboard: user and userRole available. User:", user, "Role:", userRole);
       checkAdminAccess();
     }
   }, [user, userRole, authLoading]);
 
+  useEffect(() => {
+    filterApplications();
+  }, [optimusApplications, dateFilter, statusFilter, branchFilter]);
+
   const checkAdminAccess = async () => {
-    console.log("AdminDashboard: checkAdminAccess called. Current userRole:", userRole);
     if (!user) {
       navigate("/auth");
       return;
@@ -161,9 +165,7 @@ const AdminDashboard = () => {
         fetchUserProfiles(),
         fetchOrganizations(),
         fetchEvents(),
-        fetchTeamMembers(),
-        fetchPosts(),
-        fetchGalleryItems(),
+        fetchOptimusApplications(),
       ]);
     } catch (error) {
       console.error("Error fetching admin data:", error);
@@ -188,20 +190,7 @@ const AdminDashboard = () => {
       console.error("Error fetching user profiles:", error);
       return;
     }
-
-    // Get user emails from auth.users (if available)
-    const profilesWithEmail = await Promise.all(
-      (data || []).map(async (profile: UserProfile) => {
-        try {
-          const { data: userData } = await supabase.auth.admin.getUserById(profile.user_id);
-          return { ...profile, email: userData?.user?.email };
-        } catch {
-          return profile;
-        }
-      })
-    );
-
-    setUserProfiles(profilesWithEmail);
+    setUserProfiles(data || []);
   };
 
   const fetchOrganizations = async () => {
@@ -216,239 +205,105 @@ const AdminDashboard = () => {
       setOrganizations(data || []);
     }
   };
-  
 
   const fetchEvents = async () => {
     const { data, error } = await supabase
       .from("events")
-      .select("id, title, category, start_date, end_date, location, organizer_name, status, organizations(name)")
+      .select("id, title, category, start_date, end_date, location, organizer_name, status, created_at, created_by, description, banner_url, contact_email, contact_phone, max_participants, ticket_price, organization_id")
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching events:", error);
       return;
     }
-    setEvents((data as unknown as Event[]) || []);
+    setEvents((data as Event[]) || []);
   };
 
-  const fetchTeamMembers = async () => {
+  const fetchOptimusApplications = async () => {
     const { data, error } = await supabase
-      .from("team")
-      .select("id, name, role, email, created_at")
+      .from("optimus_applications")
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching team members:", error);
+      console.error("Error fetching optimus applications:", error);
       return;
     }
-    setTeamMembers((data as TeamMember[]) || []);
+    setOptimusApplications((data as OptimusApplication[]) || []);
   };
 
-  const fetchPosts = async () => {
-    const { data, error } = await supabase
-      .from("posts")
-      .select("id, title, content, author_id, created_at")
-      .order("created_at", { ascending: false });
+  const filterApplications = () => {
+    let filtered = [...optimusApplications];
 
-    if (error) {
-      console.error("Error fetching posts:", error);
-      return;
-    }
-    setPosts((data as Post[]) || []);
-  };
-
-  const fetchGalleryItems = async () => {
-    const { data, error } = await supabase
-      .from("gallery")
-      .select("id, title, image_url, created_at")
-      .order("created_at", { ascending: false });
-    
-    if (error) {
-      console.error("Error fetching gallery items:", error);
-      return;
-    }
-    setGalleryItems((data as GalleryItem[]) || []);
-  };
-
-  const addPost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from("posts")
-        .insert({ title: newPost.title, content: newPost.content, author_id: user.id });
-      
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Post created successfully.",
+    // Date filter
+    if (dateFilter.start && dateFilter.end) {
+      const startDate = new Date(dateFilter.start);
+      const endDate = new Date(dateFilter.end);
+      filtered = filtered.filter(app => {
+        const appDate = new Date(app.created_at);
+        return appDate >= startDate && appDate <= endDate;
       });
-      setShowAddPostModal(false);
-      setNewPost({ title: "", content: "" });
-      fetchPosts();
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(app => app.action === statusFilter);
+    }
+
+    // Branch filter
+    if (branchFilter !== "all") {
+      filtered = filtered.filter(app => app.branch === branchFilter);
+    }
+
+    setFilteredApplications(filtered);
+  };
+
+  const fetchEventRegistrations = async (eventId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("event_registrations")
+        .select(`
+          id,
+          name,
+          email,
+          phone,
+          created_at,
+          event_id,
+          events (title)
+        `)
+        .eq("event_id", eventId);
+
+      if (error) throw error;
+      setSelectedEventRegistrations(data || []);
     } catch (error) {
-      console.error("Error creating post:", error);
+      console.error("Error fetching event registrations:", error);
       toast({
         title: "Error",
-        description: "Failed to create post.",
+        description: "Failed to load event registrations.",
         variant: "destructive",
       });
     }
   };
 
-  const updatePost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingPost) return;
-
+  const updateApplicationStatus = async (applicationId: string, newStatus: string) => {
     try {
       const { error } = await supabase
-        .from("posts")
-        .update({ title: newPost.title, content: newPost.content })
-        .eq("id", editingPost.id);
-      
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Post updated successfully.",
-      });
-      setShowAddPostModal(false);
-      setNewPost({ title: "", content: "" });
-      setEditingPost(null);
-      fetchPosts();
-    } catch (error) {
-      console.error("Error updating post:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update post.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deletePost = async (postId: string) => {
-    try {
-      const { error } = await supabase
-        .from("posts")
-        .delete()
-        .eq("id", postId);
+        .from("optimus_applications")
+        .update({ action: newStatus })
+        .eq("id", applicationId);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Post deleted successfully.",
+        description: "Application status updated successfully.",
       });
-      fetchPosts();
+      fetchOptimusApplications();
     } catch (error) {
-      console.error("Error deleting post:", error);
+      console.error("Error updating application status:", error);
       toast({
         title: "Error",
-        description: "Failed to delete post.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const addGalleryItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from("gallery")
-        .insert({ title: newGalleryItem.title, image_url: newGalleryItem.image_url });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Gallery item added successfully.",
-      });
-      setShowAddGalleryItemModal(false);
-      setNewGalleryItem({ title: "", image_url: "" });
-      fetchGalleryItems();
-    } catch (error) {
-      console.error("Error adding gallery item:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add gallery item.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeGalleryItem = async (itemId: string) => {
-    try {
-      const { error } = await supabase
-        .from("gallery")
-        .delete()
-        .eq("id", itemId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Gallery item removed successfully.",
-      });
-      fetchGalleryItems();
-    } catch (error) {
-      console.error("Error removing gallery item:", error);
-      toast({
-        title: "Error",
-        description: "Failed to remove gallery item.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const addTeamMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { error } = await supabase
-        .from("team")
-        .insert({ name: newTeamMember.name, email: newTeamMember.email, role: newTeamMember.role });
-      
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Team member added successfully.",
-      });
-      setShowAddTeamMemberModal(false);
-      setNewTeamMember({ name: "", email: "", role: "member" });
-      fetchTeamMembers();
-    } catch (error) {
-      console.error("Error adding team member:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add team member.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeTeamMember = async (memberId: string) => {
-    try {
-      const { error } = await supabase
-        .from("team")
-        .delete()
-        .eq("id", memberId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Team member removed successfully.",
-      });
-      fetchTeamMembers();
-    } catch (error) {
-      console.error("Error removing team member:", error);
-      toast({
-        title: "Error",
-        description: "Failed to remove team member.",
+        description: "Failed to update application status.",
         variant: "destructive",
       });
     }
@@ -467,7 +322,6 @@ const AdminDashboard = () => {
         title: "Success",
         description: `User role updated to ${newRole}`,
       });
-
       fetchUserProfiles();
     } catch (error) {
       console.error("Error updating user role:", error);
@@ -492,7 +346,6 @@ const AdminDashboard = () => {
         title: "Success",
         description: `Organization ${status}`,
       });
-
       fetchOrganizations();
     } catch (error) {
       console.error("Error updating organization status:", error);
@@ -517,7 +370,6 @@ const AdminDashboard = () => {
         title: "Success",
         description: `Event ${status}`,
       });
-
       fetchEvents();
     } catch (error) {
       console.error("Error updating event status:", error);
@@ -529,177 +381,313 @@ const AdminDashboard = () => {
     }
   };
 
-  const viewEventRegistrations = async (eventId: string, eventTitle: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("event_registrations")
-        .select("*")
-        .eq("event_id", eventId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      setSelectedEventRegistrations(data || []);
-      setSelectedEventTitle(eventTitle);
-      setShowRegistrations(true);
-    } catch (error) {
-      console.error("Error fetching registrations:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch registrations",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const downloadTable = async (tableName: string) => {
+  const downloadExcel = async (tableName: string) => {
     try {
       let data;
-      let fileName = tableName;
+      let fileName = `${tableName}.xlsx`;
 
       switch (tableName) {
-        case "profiles":
-          data = userProfiles;
+        case "optimus_applications":
+          data = filteredApplications.map(app => ({
+            Name: app.full_name,
+            Email: app.email,
+            Phone: app.phone_number,
+            Registration_Number: app.registration_number,
+            Branch: app.branch,
+            Course_Year: app.course_year,
+            Areas_of_Interest: app.areas_of_interest?.join(", ") || "",
+            Participated_Before: app.participated_before ? "Yes" : "No",
+            Status: app.action,
+            Created_At: new Date(app.created_at).toLocaleDateString(),
+          }));
+          fileName = "recruitment_applications.xlsx";
           break;
         case "organizations":
-          data = organizations;
+          data = organizations.map(org => ({
+            Name: org.name,
+            Status: org.status,
+            Created_At: new Date(org.created_at).toLocaleDateString(),
+          }));
           break;
         case "events":
-          data = events;
+          data = events.map(event => ({
+            Title: event.title,
+            Category: event.category,
+            Status: event.status,
+            Organizer: event.organizer_name,
+            Location: event.location,
+            Start_Date: new Date(event.start_date).toLocaleDateString(),
+            End_Date: new Date(event.end_date).toLocaleDateString(),
+          }));
           break;
-        case "event_registrations":
-          const { data: registrations, error } = await supabase
-            .from("event_registrations")
-            .select("*");
-          if (error) throw error;
-          data = registrations;
-          break;
-        case "team":
-          data = teamMembers;
-          break;
-        case "posts":
-          data = posts;
-          break;
-        case "gallery":
-          data = galleryItems;
+        case "profiles":
+          data = userProfiles.map(profile => ({
+            Name: profile.name,
+            Role: profile.role,
+            Email: profile.email || "N/A",
+            Created_At: new Date(profile.created_at).toLocaleDateString(),
+          }));
           break;
         default:
-          return;
+          throw new Error("Invalid table name");
       }
 
       const worksheet = XLSX.utils.json_to_sheet(data);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, tableName);
-      XLSX.writeFile(workbook, `${fileName}.xlsx`);
+      XLSX.writeFile(workbook, fileName);
 
       toast({
         title: "Download Complete",
-        description: `${fileName}.xlsx has been downloaded`,
+        description: `${tableName} data downloaded successfully.`,
       });
     } catch (error) {
       console.error("Error downloading data:", error);
       toast({
-        title: "Error",
-        description: "Failed to download data",
+        title: "Download Failed",
+        description: "Failed to download data.",
         variant: "destructive",
       });
     }
   };
 
-  const downloadEventRegistrations = () => {
-    try {
-      const worksheet = XLSX.utils.json_to_sheet(selectedEventRegistrations);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "registrations");
-      XLSX.writeFile(workbook, `${selectedEventTitle}_registrations.xlsx`);
-
-      toast({
-        title: "Download Complete",
-        description: "Event registrations downloaded",
-      });
-    } catch (error) {
-      console.error("Error downloading registrations:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download registrations",
-        variant: "destructive",
-      });
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case "Active":
+      case "Existing Member":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "Recently Added":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Discontinued":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "Shadow Member":
+        return "bg-green-100 text-green-800 border-green-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
-  if (loading) {
+  const getStatusRowStyle = (status: string) => {
+    switch (status) {
+      case "Active":
+      case "Existing Member":
+        return "border-l-4 border-yellow-400 bg-yellow-50";
+      case "Recently Added":
+        return "border-l-4 border-blue-400 bg-blue-50";
+      case "Discontinued":
+        return "border-l-4 border-red-400 bg-red-50";
+      case "Shadow Member":
+        return "border-l-4 border-green-400 bg-green-50";
+      default:
+        return "border-l-4 border-gray-400 bg-gray-50";
+    }
+  };
+
+  const viewEventRegistrations = (eventId: string, eventTitle: string) => {
+    setSelectedEventId(eventId);
+    setSelectedEventTitle(eventTitle);
+    setShowRegistrations(true);
+    fetchEventRegistrations(eventId);
+  };
+
+  if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-lg">Loading admin dashboard...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground text-xl">Loading admin dashboard...</div>
       </div>
     );
   }
 
-  const tabs = [
-    { id: "organizations", label: "Organizations", icon: Building },
-    { id: "events", label: "Events", icon: Calendar },
-    { id: "users", label: "Users", icon: Users },
-    { id: "team", label: "Team", icon: User },
-    { id: "posts", label: "Posts", icon: MessageSquare },
-    { id: "gallery", label: "Gallery", icon: Image },
-  ];
-
   return (
-    <div className="min-h-screen pt-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-8"
-        >
-          <div className="flex items-center gap-4">
-            <Shield className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-4xl font-bold text-glow">Organiser Dashboard</h1>
-              <p className="text-muted-foreground">Manage users, organizations, and events</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-background p-4">
+      <motion.div
+        className="max-w-7xl mx-auto"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Manage your organization's data and settings</p>
+        </div>
 
-          {/* Tab Navigation */}
-          <div className="flex space-x-1 bg-muted p-1 rounded-lg">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-                  activeTab === tab.id
-                    ? "bg-background text-primary shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <tab.icon className="h-4 w-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap gap-2 mb-8">
+          {[
+            { id: "recruitment", label: "Recruitment Management", icon: Users },
+            { id: "organizations", label: "Organizations", icon: Building },
+            { id: "events", label: "Events", icon: Calendar },
+            { id: "users", label: "User Management", icon: Shield },
+            { id: "downloads", label: "Download Data", icon: Download },
+          ].map(({ id, label, icon: Icon }) => (
+            <Button
+              key={id}
+              variant={activeTab === id ? "default" : "outline"}
+              onClick={() => setActiveTab(id)}
+              className="flex items-center gap-2"
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Button>
+          ))}
+        </div>
 
-          {/* Organizations Tab */}
-          {activeTab === "organizations" && (
+        {/* Recruitment Management Tab */}
+        {activeTab === "recruitment" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6"
+          >
+            {/* Join Management Box */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-2xl font-bold">Organizations Management</CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => downloadTable("organizations")}
-                  className="ml-auto"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Organizations Excel
-                </Button>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Join Management
+                  </CardTitle>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="join-form-toggle">Join Form:</Label>
+                    {joinFormActive ? <Power className="h-4 w-4 text-green-500" /> : <PowerOff className="h-4 w-4 text-red-500" />}
+                    <Switch
+                      id="join-form-toggle"
+                      checked={joinFormActive}
+                      onCheckedChange={setJoinFormActive}
+                    />
+                  </div>
+                  <Button onClick={() => downloadExcel("optimus_applications")} size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Sheet
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!joinFormActive && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <p className="text-red-700 font-medium">Recruitment is currently closed</p>
+                  </div>
+                )}
+                
+                {/* Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <div>
+                    <Label htmlFor="start-date">Start Date</Label>
+                    <Input
+                      id="start-date"
+                      type="date"
+                      value={dateFilter.start}
+                      onChange={(e) => setDateFilter(prev => ({ ...prev, start: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="end-date">End Date</Label>
+                    <Input
+                      id="end-date"
+                      type="date"
+                      value={dateFilter.end}
+                      onChange={(e) => setDateFilter(prev => ({ ...prev, end: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="status-filter">Status Filter</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Existing Member">Existing Member</SelectItem>
+                        <SelectItem value="Recently Added">Recently Added</SelectItem>
+                        <SelectItem value="Discontinued">Discontinued</SelectItem>
+                        <SelectItem value="Shadow Member">Shadow Member</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="branch-filter">Branch Filter</Label>
+                    <Select value={branchFilter} onValueChange={setBranchFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Branches</SelectItem>
+                        {Array.from(new Set(optimusApplications.map(app => app.branch))).map(branch => (
+                          <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Applications Table */}
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Branch</TableHead>
+                        <TableHead>Year</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Applied Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredApplications.map((application) => (
+                        <TableRow key={application.id} className={getStatusRowStyle(application.action)}>
+                          <TableCell className="font-medium">{application.full_name}</TableCell>
+                          <TableCell>{application.email}</TableCell>
+                          <TableCell>{application.branch}</TableCell>
+                          <TableCell>{application.course_year}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusBadgeColor(application.action)}>
+                              {application.action}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(application.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedApplication(application);
+                                setShowChangeStatusModal(true);
+                              }}
+                            >
+                              Update Status
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Organizations Tab */}
+        {activeTab === "organizations" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building className="h-5 w-5" />
+                  Organizations Management
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>Owner</TableHead>
-                      <TableHead>Description</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead>Actions</TableHead>
@@ -709,42 +697,32 @@ const AdminDashboard = () => {
                     {organizations.map((org) => (
                       <TableRow key={org.id}>
                         <TableCell className="font-medium">{org.name}</TableCell>
-                        <TableCell>Owner ID: {org.owner_id.slice(0, 8)}...</TableCell>
-                        <TableCell>{org.description || "N/A"}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              org.status === "approved"
-                                ? "default"
-                                : org.status === "rejected"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
+                          <Badge variant={org.status === "approved" ? "default" : "secondary"}>
                             {org.status}
                           </Badge>
                         </TableCell>
                         <TableCell>{new Date(org.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            {org.status === "pending" && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  onClick={() => updateOrganizationStatus(org.id, "approved")}
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => updateOrganizationStatus(org.id, "rejected")}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
+                        <TableCell className="space-x-2">
+                          {org.status === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => updateOrganizationStatus(org.id, "approved")}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => updateOrganizationStatus(org.id, "rejected")}
+                              >
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Reject
+                              </Button>
+                            </>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -752,32 +730,27 @@ const AdminDashboard = () => {
                 </Table>
               </CardContent>
             </Card>
-          )}
+          </motion.div>
+        )}
 
-          {/* Events Tab */}
-          {activeTab === "events" && (
+        {/* Events Tab */}
+        {activeTab === "events" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-2xl font-bold">Events Management</CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => downloadTable("events")}
-                  className="ml-auto"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Events Excel
-                </Button>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Events Management
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Title</TableHead>
-                      <TableHead>Organization</TableHead>
                       <TableHead>Category</TableHead>
-                      <TableHead>Location</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Organizer</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -786,50 +759,42 @@ const AdminDashboard = () => {
                     {events.map((event) => (
                       <TableRow key={event.id}>
                         <TableCell className="font-medium">{event.title}</TableCell>
-                        <TableCell>{event.organization?.name || "N/A"}</TableCell>
                         <TableCell>{event.category}</TableCell>
-                        <TableCell>{event.location}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              event.status === "approved"
-                                ? "default"
-                                : event.status === "rejected"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
+                          <Badge variant={event.status === "approved" ? "default" : "secondary"}>
                             {event.status}
                           </Badge>
                         </TableCell>
+                        <TableCell>{event.organizer_name}</TableCell>
                         <TableCell>{new Date(event.start_date).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            {event.status === "pending" && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  onClick={() => updateEventStatus(event.id, "approved")}
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => updateEventStatus(event.id, "rejected")}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => viewEventRegistrations(event.id, event.title)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
+                        <TableCell className="space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => viewEventRegistrations(event.id, event.title)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Registrations
+                          </Button>
+                          {event.status === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => updateEventStatus(event.id, "approved")}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => updateEventStatus(event.id, "rejected")}
+                              >
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Reject
+                              </Button>
+                            </>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -837,22 +802,18 @@ const AdminDashboard = () => {
                 </Table>
               </CardContent>
             </Card>
-          )}
+          </motion.div>
+        )}
 
-          {/* Users Tab */}
-          {activeTab === "users" && (
+        {/* Users Tab */}
+        {activeTab === "users" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-2xl font-bold">User Management</CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => downloadTable("profiles")}
-                  className="ml-auto"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Users Excel
-                </Button>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  User Management
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -862,6 +823,7 @@ const AdminDashboard = () => {
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Joined</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -873,141 +835,27 @@ const AdminDashboard = () => {
                           <Badge variant={profile.role === "organiser" ? "default" : "secondary"}>
                             {profile.role}
                           </Badge>
-                          {profile.role === "user" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="ml-2"
-                              onClick={() => {
-                                setUserToChangeRole(profile);
-                                setShowConfirmRoleChangeModal(true);
-                              }}
-                            >
-                              <UserPlus className="h-4 w-4 mr-1" /> Make Organiser
-                            </Button>
-                          )}
                         </TableCell>
                         <TableCell>{new Date(profile.created_at).toLocaleDateString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Team Tab */}
-          {activeTab === "team" && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-2xl font-bold">Team Management</CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => downloadTable("team")}
-                  className="ml-auto"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Team Members Excel
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Button className="mb-4" onClick={() => setShowAddTeamMemberModal(true)}>
-                  <UserPlus className="h-4 w-4 mr-2" /> Add Team Member
-                </Button>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teamMembers.map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell className="font-medium">{member.name}</TableCell>
-                        <TableCell>{member.email}</TableCell>
-                        <TableCell>
-                          <Badge>{member.role}</Badge>
-                        </TableCell>
-                        <TableCell>{new Date(member.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => removeTeamMember(member.id)}
-                          >
-                            <UserMinus className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Posts Tab */}
-          {activeTab === "posts" && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-2xl font-bold">Posts Management</CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => downloadTable("posts")}
-                  className="ml-auto"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Posts Excel
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Button className="mb-4" onClick={() => { setShowAddPostModal(true); setEditingPost(null); setNewPost({ title: "", content: "" }); }}>
-                  <MessageSquare className="h-4 w-4 mr-2" /> Create New Post
-                </Button>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Author</TableHead>
-                      <TableHead>Content</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {posts.map((post) => (
-                      <TableRow key={post.id}>
-                        <TableCell className="font-medium">{post.title}</TableCell>
-                        <TableCell>Author ID: {post.author_id.slice(0, 8)}...</TableCell>
-                        <TableCell>{post.content.substring(0, 50)}...</TableCell>
-                        <TableCell>{new Date(post.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
+                        <TableCell className="space-x-2">
+                          {profile.role === "user" ? (
+                            <Button
+                              size="sm"
+                              onClick={() => updateUserRole(profile.user_id, "organiser")}
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Make Admin
+                            </Button>
+                          ) : profile.role === "organiser" && profile.user_id !== user?.id ? (
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                setEditingPost(post);
-                                setNewPost({ title: post.title, content: post.content });
-                                setShowAddPostModal(true);
-                              }}
+                              onClick={() => updateUserRole(profile.user_id, "user")}
                             >
-                              <Edit className="h-4 w-4" />
+                              <UserMinus className="h-4 w-4 mr-1" />
+                              Remove Admin
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => deletePost(post.id)}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          ) : null}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1015,244 +863,91 @@ const AdminDashboard = () => {
                 </Table>
               </CardContent>
             </Card>
-          )}
+          </motion.div>
+        )}
 
-          {/* Gallery Tab */}
-          {activeTab === "gallery" && (
+        {/* Downloads Tab */}
+        {activeTab === "downloads" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-2xl font-bold">Gallery Management</CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => downloadTable("gallery")}
-                  className="ml-auto"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Gallery Excel
-                </Button>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Download className="h-5 w-5" />
+                  Download Data
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <Button className="mb-4" onClick={() => { setShowAddGalleryItemModal(true); setNewGalleryItem({ title: "", image_url: "" }); }}>
-                  <ImagePlus className="h-4 w-4 mr-2" /> Add Gallery Item
-                </Button>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Image URL</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {galleryItems.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.title}</TableCell>
-                        <TableCell>{item.image_url.substring(0, 50)}...</TableCell>
-                        <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => removeGalleryItem(item.id)}
-                          >
-                            <ImageMinus className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { name: "optimus_applications", title: "Recruitment Applications", description: "Download all recruitment applications" },
+                    { name: "organizations", title: "Organizations", description: "Download all organizations data" },
+                    { name: "events", title: "Events", description: "Download all events data" },
+                    { name: "profiles", title: "User Profiles", description: "Download all user profiles" },
+                  ].map((table) => (
+                    <Card key={table.name} className="p-4">
+                      <h3 className="font-semibold mb-2">{table.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-4">{table.description}</p>
+                      <Button onClick={() => downloadExcel(table.name)} className="w-full">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Excel
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          )}
-        </motion.div>
+          </motion.div>
+        )}
+      </motion.div>
 
-        {/* Add Team Member Modal */}
-        <Dialog open={showAddTeamMemberModal} onOpenChange={setShowAddTeamMemberModal}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add New Team Member</DialogTitle>
-              <DialogDescription>
-                Fill in the details for the new team member.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={addTeamMember} className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">Name</Label>
-                <Input
-                  id="name"
-                  value={newTeamMember.name}
-                  onChange={(e) => setNewTeamMember({ ...newTeamMember, name: e.target.value })}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newTeamMember.email}
-                  onChange={(e) => setNewTeamMember({ ...newTeamMember, email: e.target.value })}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="role" className="text-right">Role</Label>
-                <Input
-                  id="role"
-                  value={newTeamMember.role}
-                  onChange={(e) => setNewTeamMember({ ...newTeamMember, role: e.target.value })}
-                  className="col-span-3"
-                  placeholder="e.g., member, manager, etc."
-                  required
-                />
-              </div>
-              <DialogFooter>
-                <Button type="submit">Add Member</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Confirm Role Change Modal */}
-        <Dialog open={showConfirmRoleChangeModal} onOpenChange={setShowConfirmRoleChangeModal}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirm Role Change</DialogTitle>
-              <DialogDescription>
-                This user ({userToChangeRole?.name}) will have access to the website as an Organiser. Do you want to continue?
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowConfirmRoleChangeModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={async () => {
-                if (userToChangeRole) {
-                  await updateUserRole(userToChangeRole.user_id, "organiser");
-                  setShowConfirmRoleChangeModal(false);
-                  setUserToChangeRole(null);
-                }
-              }}>
-                Allow
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Add/Edit Post Modal */}
-        <Dialog open={showAddPostModal} onOpenChange={setShowAddPostModal}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>{editingPost ? "Edit Post" : "Create New Post"}</DialogTitle>
-              <DialogDescription>
-                {editingPost ? "Edit the details of the post." : "Fill in the details for the new post."}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={editingPost ? updatePost : addPost} className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="post-title" className="text-right">Title</Label>
-                <Input
-                  id="post-title"
-                  value={newPost.title}
-                  onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="post-content" className="text-right">Content</Label>
-                <Textarea
-                  id="post-content"
-                  value={newPost.content}
-                  onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                  className="col-span-3 min-h-[100px]"
-                  required
-                />
-              </div>
-              <DialogFooter>
-                <Button type="submit">{editingPost ? "Save Changes" : "Create Post"}</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Add Gallery Item Modal */}
-        <Dialog open={showAddGalleryItemModal} onOpenChange={setShowAddGalleryItemModal}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add New Gallery Item</DialogTitle>
-              <DialogDescription>
-                Add a new image to the gallery.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={addGalleryItem} className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="gallery-title" className="text-right">Title</Label>
-                <Input
-                  id="gallery-title"
-                  value={newGalleryItem.title}
-                  onChange={(e) => setNewGalleryItem({ ...newGalleryItem, title: e.target.value })}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="image-url" className="text-right">Image URL</Label>
-                <Input
-                  id="image-url"
-                  value={newGalleryItem.image_url}
-                  onChange={(e) => setNewGalleryItem({ ...newGalleryItem, image_url: e.target.value })}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <DialogFooter>
-                <Button type="submit">Add Item</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Event Registrations Modal */}
-        <Dialog open={showRegistrations} onOpenChange={setShowRegistrations}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Registrations for {selectedEventTitle}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Button onClick={downloadEventRegistrations} className="w-full">
-                <Download className="h-4 w-4 mr-2" />
-                Download Registrations Excel
-              </Button>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Registered</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedEventRegistrations.map((registration) => (
-                    <TableRow key={registration.id}>
-                      <TableCell>{registration.name}</TableCell>
-                      <TableCell>{registration.email}</TableCell>
-                      <TableCell>{registration.phone || "N/A"}</TableCell>
-                      <TableCell>{new Date(registration.created_at).toLocaleDateString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+      {/* Change Status Modal */}
+      <Dialog open={showChangeStatusModal} onOpenChange={setShowChangeStatusModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Application Status</DialogTitle>
+            <DialogDescription>
+              Change the recruitment status for {selectedApplication?.full_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="status-select">New Status</Label>
+              <Select
+                defaultValue={selectedApplication?.action}
+                onValueChange={(value) => {
+                  if (selectedApplication) {
+                    updateApplicationStatus(selectedApplication.id, value);
+                    setShowChangeStatusModal(false);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Existing Member">Existing Member</SelectItem>
+                  <SelectItem value="Recently Added">Recently Added</SelectItem>
+                  <SelectItem value="Discontinued">Discontinued</SelectItem>
+                  <SelectItem value="Shadow Member">Shadow Member</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Event Registrations Modal */}
+      <EventRegistrationsModal
+        isOpen={showRegistrations}
+        onClose={() => setShowRegistrations(false)}
+        eventId={selectedEventId}
+        registrations={selectedEventRegistrations}
+        loading={loading}
+        fetchRegistrations={() => fetchEventRegistrations(selectedEventId)}
+        eventTitle={selectedEventTitle}
+      />
     </div>
   );
 };
