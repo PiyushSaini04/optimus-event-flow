@@ -123,7 +123,7 @@ const AdminDashboard = () => {
   const [showRegistrations, setShowRegistrations] = useState(false);
   const [selectedEventTitle, setSelectedEventTitle] = useState("");
   const [selectedEventId, setSelectedEventId] = useState("");
-  const [joinFormActive, setJoinFormActive] = useState(true);
+  {/* Remove recruitment toggle from AdminDashboard - now in JoinUs.tsx */}
   
   // Filter states
   const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
@@ -549,15 +549,6 @@ const AdminDashboard = () => {
                   </CardTitle>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="join-form-toggle">Join Form:</Label>
-                    {joinFormActive ? <Power className="h-4 w-4 text-green-500" /> : <PowerOff className="h-4 w-4 text-red-500" />}
-                    <Switch
-                      id="join-form-toggle"
-                      checked={joinFormActive}
-                      onCheckedChange={setJoinFormActive}
-                    />
-                  </div>
                   <Button onClick={() => downloadExcel("optimus_applications")} size="sm">
                     <Download className="h-4 w-4 mr-2" />
                     Download Sheet
@@ -565,11 +556,6 @@ const AdminDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                {!joinFormActive && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                    <p className="text-red-700 font-medium">Recruitment is currently closed</p>
-                  </div>
-                )}
                 
                 {/* Filters */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

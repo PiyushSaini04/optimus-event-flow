@@ -14,32 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      digital_tickets: {
+        Row: {
+          created_at: string
+          event_id: string | null
+          id: string
+          issued_at: string
+          qr_code_data: string
+          registration_id: string | null
+          ticket_number: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          issued_at?: string
+          qr_code_data: string
+          registration_id?: string | null
+          ticket_number: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          issued_at?: string
+          qr_code_data?: string
+          registration_id?: string | null
+          ticket_number?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_tickets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_tickets_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "event_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_registrations: {
         Row: {
           created_at: string | null
+          custom_answers: Json | null
           email: string
           event_id: string
           id: string
+          mobile_number: string | null
           name: string
           phone: string | null
+          registration_number: string | null
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
+          custom_answers?: Json | null
           email: string
           event_id: string
           id?: string
+          mobile_number?: string | null
           name: string
           phone?: string | null
+          registration_number?: string | null
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
+          custom_answers?: Json | null
           email?: string
           event_id?: string
           id?: string
+          mobile_number?: string | null
           name?: string
           phone?: string | null
+          registration_number?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -67,6 +124,7 @@ export type Database = {
           max_participants: number
           organization_id: string | null
           organizer_name: string
+          questions: Json | null
           registration_link: string | null
           start_date: string
           status: string | null
@@ -87,6 +145,7 @@ export type Database = {
           max_participants: number
           organization_id?: string | null
           organizer_name: string
+          questions?: Json | null
           registration_link?: string | null
           start_date: string
           status?: string | null
@@ -107,6 +166,7 @@ export type Database = {
           max_participants?: number
           organization_id?: string | null
           organizer_name?: string
+          questions?: Json | null
           registration_link?: string | null
           start_date?: string
           status?: string | null
@@ -135,6 +195,7 @@ export type Database = {
           full_name: string
           gender: string | null
           id: string
+          is_active: boolean | null
           motivation: string
           participated_before: boolean
           phone_number: string
@@ -153,6 +214,7 @@ export type Database = {
           full_name: string
           gender?: string | null
           id?: string
+          is_active?: boolean | null
           motivation: string
           participated_before: boolean
           phone_number: string
@@ -171,6 +233,7 @@ export type Database = {
           full_name?: string
           gender?: string | null
           id?: string
+          is_active?: boolean | null
           motivation?: string
           participated_before?: boolean
           phone_number?: string

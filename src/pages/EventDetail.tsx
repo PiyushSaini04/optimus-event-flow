@@ -44,6 +44,7 @@ interface Event {
   created_at: string;
   organization_id: string | null;
   status: string;
+  questions?: string[];
 }
 
 const EventDetail = () => {
@@ -636,6 +637,8 @@ const EventDetail = () => {
         onClose={() => setShowRegistrationModal(false)}
         eventId={event.id}
         eventTitle={event.title}
+        eventPrice={event.ticket_price || 0}
+        customQuestions={event.questions || []}
       />
     </div>
   );

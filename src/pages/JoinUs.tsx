@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { User, Phone, Mail, Calendar, MapPin, GraduationCap, Heart } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, Phone, Mail, Calendar, MapPin, GraduationCap, Heart, Power, PowerOff } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +11,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthContext";
 
 const JoinUs = () => {
   const { toast } = useToast();
+  const { user, userRole } = useAuth();
+  const [recruitmentActive, setRecruitmentActive] = useState(true);
+  const [checkingStatus, setCheckingStatus] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     regNo: "",
@@ -29,6 +34,54 @@ const JoinUs = () => {
     motivation: ""
   });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    checkRecruitmentStatus();
+  }, []);
+
+  const checkRecruitmentStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("optimus_applications")
+        .select("is_active")
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      setRecruitmentActive(data?.is_active ?? true);
+    } catch (error) {
+      console.error("Error checking recruitment status:", error);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  const toggleRecruitment = async () => {
+    try {
+      const { error } = await supabase
+        .from("optimus_applications")
+        .update({ is_active: !recruitmentActive })
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all records
+
+      if (error) throw error;
+
+      setRecruitmentActive(!recruitmentActive);
+      toast({
+        title: recruitmentActive ? "Recruitment Closed" : "Recruitment Opened",
+        description: `Recruitment has been ${recruitmentActive ? 'deactivated' : 'activated'} successfully.`,
+      });
+    } catch (error) {
+      console.error("Error toggling recruitment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update recruitment status.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const domains = [
     "Graphic Designing & Video Editing",
@@ -125,9 +178,40 @@ const JoinUs = () => {
     }
   };
 
+  if (checkingStatus) {
+    return (
+      <div className="min-h-screen pt-6 flex items-center justify-center">
+        <div className="animate-pulse text-lg">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pt-6">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Recruitment Toggle Button - Only for Organisers */}
+        {userRole === 'organiser' && (
+          <div className="flex justify-end mb-6">
+            <Button
+              onClick={toggleRecruitment}
+              variant={recruitmentActive ? "destructive" : "default"}
+              className="flex items-center gap-2"
+            >
+              {recruitmentActive ? (
+                <>
+                  <PowerOff className="h-4 w-4" />
+                  Turn Off Recruitment
+                </>
+              ) : (
+                <>
+                  <Power className="h-4 w-4" />
+                  Turn On Recruitment
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-12 fade-up">
           <h1 className="text-4xl md:text-5xl font-bold text-glow mb-6">
@@ -174,12 +258,34 @@ const JoinUs = () => {
           ))}
         </div>
 
-        {/* Application Form */}
-        <Card className="card-modern fade-up">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center">Membership Application</CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* Application Form or Closed Message */}
+        {!recruitmentActive ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="card-modern fade-up">
+              <CardContent className="p-12 text-center">
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-8 backdrop-blur-sm">
+                  <PowerOff className="h-16 w-16 text-destructive mx-auto mb-4" />
+                  <h2 className="text-2xl font-bold text-destructive mb-2">
+                    Recruitment is Currently Closed
+                  </h2>
+                  <p className="text-muted-foreground">
+                    We're not accepting new applications at this time. 
+                    Please check back later for updates on when recruitment reopens.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : (
+          <Card className="card-modern fade-up">
+            <CardHeader>
+              <CardTitle className="text-2xl text-center">Membership Application</CardTitle>
+            </CardHeader>
+            <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Personal Information */}
               <div className="space-y-4">
@@ -427,6 +533,7 @@ const JoinUs = () => {
             </form>
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );

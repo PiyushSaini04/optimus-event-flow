@@ -1,5 +1,5 @@
+import MyEventsTicket from "@/components/MyEventsTicket";
 import EditProfileModal from "@/components/EditProfileModal";
-// ...existing code...
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -458,6 +458,11 @@ const Dashboard = () => {
                         </div>
                         <div className="flex items-center space-x-2">
 
+                          <MyEventsTicket 
+                            eventId={event.id}
+                            userId={user?.id || ""}
+                            eventTitle={event.title}
+                          />
                           <Button
                             variant="outline"
                             size="sm"
@@ -465,13 +470,13 @@ const Dashboard = () => {
                           >
                             <Eye className="h-4 w-4 text-blue-500" />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/create-event`, { state: { eventData: event } })} // Pass event data for prefill
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => navigate(`/create-event`, { state: { eventData: event } })} // Pass event data for prefill
+                           >
+                             <Edit3 className="h-4 w-4" />
+                           </Button>
 
                         </div>
                       </div>
@@ -486,7 +491,22 @@ const Dashboard = () => {
         <Dialog open={showRegistrations} onOpenChange={setShowRegistrations}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Registrations for {selectedEventTitle}</DialogTitle>
+              <DialogTitle className="flex items-center justify-between">
+                <span>Registrations for {selectedEventTitle}</span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    Total: {selectedEventRegistrations.length} Registrations
+                  </Badge>
+                  <Button
+                    onClick={downloadEventRegistrations}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </div>
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <Button onClick={downloadEventRegistrations} className="w-full">
