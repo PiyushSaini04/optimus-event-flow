@@ -1,4 +1,4 @@
-"use client";
+
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -536,6 +536,33 @@ export default function Home() {
           </div>
         </div>
       </section>
+      
+      {/* ENHANCED FINAL CTA */}
+      <section className="py-20 px-6 bg-gradient-to-r from-blue-600 via-blue-800 to-blue-600 text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_50%)]" />
+        <div className="relative z-10 animate-fade-in-up">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+            Ready to power your events with{' '}
+            <span className="bg-gradient-to-r from-yellow-300 to-yellow-100 bg-clip-text text-transparent">
+              OPTIMUS
+            </span>
+            ?
+          </h2>
+          <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
+            Join thousands of successful event organizers and attendees worldwide
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              size="lg"
+              onClick={() => navigate('/join-us')}
+              className="bg-white text-blue-600 hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-zinc-900 hover-lift glow-effect-light dark:glow-effect shadow-lg font-semibold"
+            >
+              Get Started Now <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+
+          </div>
+        </div>
+      </section>
 
       {/* ENHANCED FAQ */}
       <section className="py-20 px-6 bg-white dark:bg-black max-w-4xl mx-auto">
@@ -568,32 +595,8 @@ export default function Home() {
         </Accordion>
       </section>
 
-      {/* ENHANCED FINAL CTA */}
-      <section className="py-20 px-6 bg-gradient-to-r from-blue-600 via-blue-800 to-blue-600 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_50%)]" />
-        <div className="relative z-10 animate-fade-in-up">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
-            Ready to power your events with{' '}
-            <span className="bg-gradient-to-r from-yellow-300 to-yellow-100 bg-clip-text text-transparent">
-              OPTIMUS
-            </span>
-            ?
-          </h2>
-          <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
-            Join thousands of successful event organizers and attendees worldwide
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              onClick={() => navigate('/join-us')}
-              className="bg-white text-blue-600 hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-zinc-900 hover-lift glow-effect-light dark:glow-effect shadow-lg font-semibold"
-            >
-              Get Started Now <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-
-          </div>
-        </div>
-      </section>
+      
+      
     </div>
   );
 }

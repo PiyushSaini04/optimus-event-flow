@@ -18,12 +18,16 @@ import {
   ExternalLink,
   Building,
   ArrowLeft,
+  Ticket,
 } from "lucide-react";
+import MyEventsTicket from "@/components/MyEventsTicket";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthContext";
 
 interface Event {
   id: string;
@@ -51,9 +55,13 @@ const EventDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth(); // Use the useAuth hook to get user information
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [registrationData, setRegistrationData] = useState<any>(null);
+  const [showTicketModal, setShowTicketModal] = useState(false);
 
   const fetchEventDetails = async () => {
     try {
@@ -125,6 +133,38 @@ const EventDetail = () => {
     }
   };
 
+  const fetchRegistrationStatus = async () => {
+    if (!user || !id) return;
+    try {
+      const { data, error } = await supabase
+        .from("event_registrations")
+        .select("*")
+        .eq("event_id", id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        // PGRST116 means no rows found, which is fine.
+        throw error;
+      }
+
+      if (data) {
+        setIsRegistered(true);
+        setRegistrationData(data);
+      } else {
+        setIsRegistered(false);
+        setRegistrationData(null);
+      }
+    } catch (error) {
+      console.error("Error fetching registration status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load registration status.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleShare = async () => {
     try {
       if (navigator.share && navigator.canShare) {
@@ -148,6 +188,23 @@ const EventDetail = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleRegisterClick = () => {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to register for the event.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+    setShowRegistrationModal(true);
+  };
+
+  const handleViewTicket = () => {
+    setShowTicketModal(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -210,8 +267,11 @@ const EventDetail = () => {
   useEffect(() => {
     if (id) {
       fetchEventDetails();
+      if (user) {
+        fetchRegistrationStatus();
+      }
     }
-  }, [id]);
+  }, [id, user]);
 
   if (loading) {
     return (
@@ -334,13 +394,26 @@ const EventDetail = () => {
                   </div>
                 </div>
                 
-                <Button 
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-lg font-semibold"
-                  onClick={() => setShowRegistrationModal(true)}
-                  disabled={eventStatus.status === "Event Ended"}
-                >
-                  Register for Event
-                </Button>
+                {isRegistered ? (
+                  <div className="space-y-2">
+                    <p className="text-center text-green-500 font-semibold">You are registered!</p>
+                    <Button 
+                      className="w-full bg-green-600 hover:bg-green-700 text-primary-foreground py-3 text-lg font-semibold"
+                      onClick={handleViewTicket}
+                    >
+                      <Ticket className="h-5 w-5 mr-2" />
+                      View Ticket
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-lg font-semibold"
+                    onClick={handleRegisterClick}
+                    disabled={eventStatus.status === "Event Ended"}
+                  >
+                    Register for Event
+                  </Button>
+                )}
                 
                 {event.registration_link && (
                   <Button 
@@ -562,7 +635,7 @@ const EventDetail = () => {
                 <Button 
                   className="w-full justify-start" 
                   variant="outline"
-                  onClick={() => setShowRegistrationModal(true)}
+                  onClick={handleRegisterClick}
                   disabled={eventStatus.status === "Event Ended"}
                 >
                   <Users className="h-4 w-4 mr-2" />
@@ -640,6 +713,17 @@ const EventDetail = () => {
         eventPrice={event.ticket_price || 0}
         customQuestions={event.questions || []}
       />
+
+      {isRegistered && registrationData && (
+        <MyEventsTicket
+          eventId={event.id}
+          userId={user?.id || ""}
+          eventTitle={event.title}
+          registrationId={registrationData.id}
+          isOpen={showTicketModal}
+          onClose={() => setShowTicketModal(false)}
+        />
+      )}
     </div>
   );
 };

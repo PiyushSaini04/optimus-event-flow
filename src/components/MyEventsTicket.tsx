@@ -11,13 +11,21 @@ interface MyEventsTicketProps {
   eventId: string;
   userId: string;
   eventTitle: string;
+  registrationId?: string; // Add this prop
+  isOpen: boolean; // Add this prop
+  onClose: () => void; // Add this prop
 }
 
-const MyEventsTicket = ({ eventId, userId, eventTitle }: MyEventsTicketProps) => {
+const MyEventsTicket = ({ eventId, userId, eventTitle, registrationId, isOpen, onClose }: MyEventsTicketProps) => {
   const { toast } = useToast();
-  const [showTicket, setShowTicket] = useState(false);
   const [ticketData, setTicketData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchTicket();
+    }
+  }, [isOpen]);
 
   const fetchTicket = async () => {
     setLoading(true);
@@ -49,13 +57,13 @@ const MyEventsTicket = ({ eventId, userId, eventTitle }: MyEventsTicketProps) =>
             description: "You don't have a ticket for this event yet.",
             variant: "destructive",
           });
+          onClose(); // Close modal if no ticket
           return;
         }
         throw ticketError;
       }
 
       setTicketData(ticketData);
-      setShowTicket(true);
     } catch (error) {
       console.error('Error fetching ticket:', error);
       toast({
@@ -63,48 +71,41 @@ const MyEventsTicket = ({ eventId, userId, eventTitle }: MyEventsTicketProps) =>
         description: "Failed to load your ticket.",
         variant: "destructive",
       });
+      onClose(); // Close modal on error
     } finally {
       setLoading(false);
     }
   };
 
-  if (!ticketData) {
+  if (loading) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={fetchTicket}
-        disabled={loading}
-      >
-        <Ticket className="h-4 w-4 mr-2" />
-        {loading ? "Loading..." : "View Ticket"}
-      </Button>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Loading Ticket...</DialogTitle>
+          </DialogHeader>
+          <p>Please wait while we fetch your ticket details.</p>
+        </DialogContent>
+      </Dialog>
     );
   }
 
-  return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setShowTicket(true)}
-      >
-        <Ticket className="h-4 w-4 mr-2" />
-        View Ticket
-      </Button>
+  if (!ticketData) {
+    return null; // Or some fallback UI, but since we close on no ticket, this might not be reached
+  }
 
-      <Dialog open={showTicket} onOpenChange={setShowTicket}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Your Digital Ticket</DialogTitle>
-          </DialogHeader>
-          <DigitalTicket
-            registration={ticketData.registration}
-            ticket={ticketData}
-          />
-        </DialogContent>
-      </Dialog>
-    </>
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Your Digital Ticket</DialogTitle>
+        </DialogHeader>
+        <DigitalTicket
+          registration={ticketData.registration}
+          ticket={ticketData}
+        />
+      </DialogContent>
+    </Dialog>
   );
 };
 

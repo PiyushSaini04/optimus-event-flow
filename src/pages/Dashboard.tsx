@@ -12,7 +12,7 @@ interface EventRegistration {
   phone: string;
   created_at: string;
   event_id: string;
-  event?: { title: string };
+  event?: { title: string, start_date: string, location: string }; // Add start_date and location
 }
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -26,7 +26,8 @@ import {
   Bell,
   Edit3,
   Trash2,
-  Eye
+  Eye,
+  Ticket
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,12 +143,16 @@ const Dashboard = () => {
   });
 
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
-
+  const [registeredEvents, setRegisteredEvents] = useState<EventRegistration[]>([]);
+  const [showMyTicketModal, setShowMyTicketModal] = useState(false);
+  const [selectedTicketEventId, setSelectedTicketEventId] = useState("");
+  const [selectedTicketRegistrationId, setSelectedTicketRegistrationId] = useState("");
 
   useEffect(() => {
     if (user) {
       fetchUserProfile();
       fetchUserEvents();
+      fetchRegisteredEvents();
     }
   }, [user]);
 
@@ -210,6 +215,40 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchRegisteredEvents = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("event_registrations")
+        .select(`
+          id,
+          event_id,
+          created_at,
+          event:events(title, start_date, location)
+        `)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      setRegisteredEvents(data as EventRegistration[]);
+    } catch (error) {
+      console.error("Error fetching registered events:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load registered events.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewMyTicket = (eventId: string, registrationId: string) => {
+    setSelectedTicketEventId(eventId);
+    setSelectedTicketRegistrationId(registrationId);
+    setShowMyTicketModal(true);
   };
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -296,8 +335,10 @@ const Dashboard = () => {
       </div>
     );
   }
+ 
 
   return (
+    <>
     <div className="min-h-screen pt-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
@@ -406,6 +447,58 @@ const Dashboard = () => {
                 </div>
                 <div className="text-2xl font-bold text-muted-foreground mb-1">{stats.completedEvents}</div>
                 <div className="text-sm text-muted-foreground">Completed Events</div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* My Registered Events */}
+          <motion.div variants={itemVariants}>
+            <Card className="card-modern">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>My Registered Events</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {registeredEvents.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Ticket className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">No registered events</h3>
+                    <p className="text-muted-foreground mb-4">
+                      You haven't registered for any events yet. Find exciting events in the Event Hub!
+                    </p>
+                    <Button onClick={() => navigate('/events')} className="btn-hero">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Explore Events
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {registeredEvents.map((registration) => (
+                      <div
+                        key={registration.id}
+                        className="flex items-center justify-between p-4 border border-border/50 rounded-lg hover:bg-muted/20 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{registration.event?.title}</h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {formatDate(registration.event?.start_date || "")} • {registration.event?.location || 'Online'}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewMyTicket(registration.event_id, registration.id)}
+                          >
+                            <Ticket className="h-4 w-4 mr-2" />
+                            View Ticket
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -538,6 +631,15 @@ const Dashboard = () => {
         </Dialog>
       </div>
     </div>
+    <MyEventsTicket
+      eventId={selectedTicketEventId}
+      userId={user?.id || ""}
+      eventTitle=""
+      registrationId={selectedTicketRegistrationId}
+      isOpen={showMyTicketModal}
+      onClose={() => setShowMyTicketModal(false)}
+    />
+    </>
   );
 };
 
