@@ -8,6 +8,7 @@ import { AuthProvider } from "./components/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import BottomNav from "./components/BottomNav";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import EventHub from "./pages/EventHub";
@@ -31,7 +32,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <div className="min-h-screen flex flex-col">
+            <div className="min-h-screen flex flex-col pb-16 md:pb-0">
               <Navbar />
               <main className="flex-1">
                 <Routes>
@@ -62,6 +63,7 @@ const App = () => (
                 </Routes>
               </main>
               <Footer />
+              <BottomNav />
             </div>
           </BrowserRouter>
         </TooltipProvider>
