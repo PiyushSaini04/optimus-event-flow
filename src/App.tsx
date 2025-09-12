@@ -20,6 +20,9 @@ import Posts from "./pages/Posts";
 import Gallery from "./pages/Gallery";
 import Team from "./pages/Team";
 import JoinUs from "./pages/JoinUs";
+import EventScannerPage from "./pages/EventScannerPage";
+import Receipt from "./pages/Receipt";
+import EventCheckIn from "./pages/EventCheckIn"; // Import the new page
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +62,13 @@ const App = () => (
                   <Route path="/gallery" element={<Gallery />} />
                   <Route path="/team" element={<Team />} />
                   <Route path="/join-us" element={<JoinUs />} />
+                  <Route path="/scanner/:eventId" element={
+                    <ProtectedRoute>
+                      <EventScannerPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/receipt" element={<Receipt />} />
+                  <Route path="/check-in/:eventId" element={<EventCheckIn />} /> {/* Add the new public route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

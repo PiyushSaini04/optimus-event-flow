@@ -87,7 +87,8 @@ const EventDetail = () => {
           created_by,
           created_at,
           organization_id,
-          status
+          status,
+          questions
         `)
         .eq("id", id)
         .single();
@@ -108,7 +109,7 @@ const EventDetail = () => {
       }
 
       // Check if event is accessible (approved or user's own event)
-      if (eventData.status !== "approved") {
+      if (eventData.status !== "approved" && eventData.created_by !== user?.id) {
         toast({
           title: "Event not available",
           description: "This event is not currently available for public viewing.",
@@ -141,10 +142,10 @@ const EventDetail = () => {
         .select("*")
         .eq("event_id", id)
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") {
-        // PGRST116 means no rows found, which is fine.
+      if (error) {
+        console.error("Error fetching registration status:", error);
         throw error;
       }
 
@@ -157,11 +158,9 @@ const EventDetail = () => {
       }
     } catch (error) {
       console.error("Error fetching registration status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load registration status.",
-        variant: "destructive",
-      });
+      // Don't show error toast for registration status check
+      setIsRegistered(false);
+      setRegistrationData(null);
     }
   };
 
@@ -415,20 +414,20 @@ const EventDetail = () => {
                   </Button>
                 )}
                 
-                {event.registration_link && (
+                {/* {event.registration_link && (
                   <Button 
                     variant="outline"
                     className="w-full"
                     onClick={() => window.open(event.registration_link!, "_blank")}
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    External Registration
+                    
                   </Button>
                 )}
-                
+                 */}
                 <Button 
                   variant="outline" 
-                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                  className="w-full border-gray-300 text-gray-200 hover:bg-gray-50"
                   onClick={handleShare}
                 >
                   <Share className="h-4 w-4 mr-2" />

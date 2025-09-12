@@ -1,7 +1,7 @@
 
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
 import {
   Card,
   CardContent,
@@ -30,7 +30,6 @@ import {
   TrendingUp,
   Shield,
 } from "lucide-react";
-
 
 interface ValueProp {
   icon: React.ComponentType<{ className?: string; }>;
@@ -353,93 +352,85 @@ export default function Home() {
       </section>
 
       {/* VALUE PROPS WITH HOVER EFFECTS */}
-
-      {/* Card CONTENT */}
-        <section className="py-24 px-6 bg-white dark:bg-black">
-          <div className="max-w-4xl mx-auto text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent animate-fade-in">
-              Everything You Need in One Place
-            </h2>
-            <p className="mt-4 text-xl text-gray-600 dark:text-gray-400">
-              Our platform provides a complete solution for discovering, managing, and securing events from start to finish.
-            </p>
-          </div>
-          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-            {([
-              {
-                icon: Globe,
-                title: "Discover Events",
-                desc: "Find trending events near you or worldwide with our advanced search filters.",
-                features: ["Location-based search", "Category filtering", "Real-time updates", "Personalized recommendations"],
-                color: "from-green-500 to-emerald-600",
-                image: "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg"
-              },
-              {
-                icon: Ticket,
-                title: "Book Tickets",
-                desc: "Seamless ticket booking with instant confirmations and secure payment processing.",
-                features: ["Instant confirmations", "QR code tickets", "Group bookings", "Mobile wallet integration"],
-                color: "from-purple-500 to-violet-600",
-                image: "https://images.pexels.com/photos/17527817/pexels-photo-17527817.jpeg"
-              },
-              {
-                icon: Users,
-                title: "Organize Events",
-                desc: "Complete event management tools to handle attendees, schedules and vendors efficiently.",
-                features: ["Attendee management", "Vendor coordination", "Schedule planning", "Analytics dashboard"],
-                color: "from-orange-500 to-red-600",
-                image: "https://images.pexels.com/photos/4050302/pexels-photo-4050302.jpeg"
-              },
-              {
-                icon: CreditCard,
-                title: "Secure Payments",
-                desc: "Multiple payment options with bank-level security and instant transaction processing.",
-                features: ["Multiple payment modes", "Fraud protection", "Instant refunds", "Transaction history"],
-                color: "from-blue-500 to-cyan-600",
-                image: "https://images.pexels.com/photos/50987/money-card-business-credit-card-50987.jpeg"
-              },
-            ] as ValueProp[]).map((item, idx) => (
-              <Card
-                key={idx}
-                className="relative bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-md shadow-gray-300 dark:shadow-gray-500 
-                   transition-all duration-300 ease-out 
-                   hover:shadow-lg hover:shadow-blue-500/50 hover:border-blue-500/50 
-                   hover:scale-[1.02] hover:-translate-y-2 group" // Added scale and translate-y
-              >
-                {/* Animated gradient overlay on hover */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
-
-                <div className="relative z-10 flex flex-col md:flex-row h-full">
-                  {/* Image and content containers */}
-                  <div className="w-full md:w-1/2 flex">
+      
+      <section className="py-24 px-6 bg-white dark:bg-black">
+        <h2 className="text-4xl md:text-5xl font-bold text-center mb-12 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent animate-fade-in">
+          Everything You Need in One Place
+        </h2>
+        <div className="max-w-7xl mx-auto space-y-12">
+          {([
+            {
+              icon: Globe,
+              title: "Discover Events",
+              desc: "Find trending events near you or worldwide with our advanced search filters.",
+              features: ["Location-based search", "Category filtering", "Real-time updates", "Personalized recommendations"],
+              color: "from-green-500 to-emerald-600",
+              image: "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg"
+            },
+            {
+              icon: Ticket,
+              title: "Book Tickets",
+              desc: "Seamless ticket booking with instant confirmations and secure payment processing.",
+              features: ["Instant confirmations", "QR code tickets", "Group bookings", "Mobile wallet integration"],
+              color: "from-purple-500 to-violet-600",
+              image: "https://images.pexels.com/photos/17527817/pexels-photo-17527817.jpeg"
+            },
+            {
+              icon: Users,
+              title: "Organize Events",
+              desc: "Complete event management tools to handle attendees, schedules and vendors efficiently.",
+              features: ["Attendee management", "Vendor coordination", "Schedule planning", "Analytics dashboard"],
+              color: "from-orange-500 to-red-600",
+              image: "https://images.pexels.com/photos/4050302/pexels-photo-4050302.jpeg"
+            },
+            {
+              icon: CreditCard,
+              title: "Secure Payments",
+              desc: "Multiple payment options with bank-level security and instant transaction processing.",
+              features: ["Multiple payment modes", "Fraud protection", "Instant refunds", "Transaction history"],
+              color: "from-blue-500 to-cyan-600",
+              image: "https://images.pexels.com/photos/50987/money-card-business-credit-card-50987.jpeg"
+            },
+          ] as ValueProp[]).map((item, idx) => (
+            <div
+              key={idx}
+              className={`flex flex-col md:flex-row ${idx % 2 === 0 ? 'md:justify-start' : 'md:justify-end'} animate-fade-in-up`}
+              style={{ animationDelay: `${idx * 0.15}s` }}
+              onMouseEnter={() => setHoveredCard(`value-${idx}`)}
+              onMouseLeave={() => setHoveredCard(null)}
+            >
+              <Card className="bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl w-full md:w-4/5 lg:w-3/4 xl:w-4/5 overflow-hidden shadow-md shadow-gray-300 dark:shadow-gray-500 transition-all duration-300 hover:border-blue-400 dark:hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-400/50 dark:hover:shadow-blue-500/50 hover:scale-105 hover:-translate-y-2 group">
+                <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+                <div className="relative z-10 flex flex-col md:flex-row h-full min-h-[280px]">
+                  <div className="w-full md:w-1/3 flex">
                     <img src={item.image} alt={item.title} className="w-full h-48 md:h-full object-cover flex-1" />
                   </div>
-                  <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
-                    {/* Icon, title, description, and features */}
-                    <div className={`w-14 h-14 mb-4 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center transition-all duration-300`}>
-                      <item.icon className="w-7 h-7 text-white" />
-                    </div>
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors duration-300">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 text-gray-600 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
-                      {item.desc}
-                    </p>
-                    <ul className="mt-4 space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                      {item.features.map((feature, featureIdx) => (
-                        <li key={featureIdx} className="flex items-center">
-                          <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${item.color} mr-2 flex-shrink-0`}></div>
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="w-full md:w-2/3 p-8 flex flex-col">
+                    <CardHeader className="flex-shrink-0">
+                      <div className={`w-14 h-14 mx-auto md:mx-0 mb-4 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center transition-all duration-300 ${hoveredCard === `value-${idx}` ? 'scale-110 animate-float' : ''}`}>
+                        <item.icon className="w-7 h-7 text-white" />
+                      </div>
+                      <CardTitle className="text-xl md:text-2xl font-bold text-center md:text-left text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors duration-300">{item.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center md:text-left flex-grow">
+                      <p className="text-gray-600 dark:text-gray-400 text-base md:text-lg group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300 mb-4">{item.desc}</p>
+                      <ul className="space-y-2">
+                        {item.features.map((feature, featureIdx) => (
+                          <li key={featureIdx} className="flex items-center text-sm md:text-base text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300">
+                            <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${item.color} mr-3 flex-shrink-0`}></div>
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
                   </div>
                 </div>
               </Card>
-            ))}
-          </div>
-        </section>
-      
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* FEATURES WITH STAGGER ANIMATION */}
       <section className="py-20 px-2 bg-gradient-to-b from-gray-100 to-white dark:from-zinc-950 dark:to-black">
         <h2 className="text-4xl font-bold text-center mb-16 animate-fade-in text-gray-900 dark:text-white">
@@ -540,7 +531,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-
+      
       {/* ENHANCED FINAL CTA */}
       <section className="py-20 px-6 bg-gradient-to-r from-blue-600 via-blue-800 to-blue-600 text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_50%)]" />
@@ -599,8 +590,8 @@ export default function Home() {
         </Accordion>
       </section>
 
-
-
+      
+      
     </div>
   );
 }
