@@ -23,6 +23,8 @@ import JoinUs from "./pages/JoinUs";
 import EventScannerPage from "./pages/EventScannerPage";
 import Receipt from "./pages/Receipt";
 import EventCheckIn from "./pages/EventCheckIn"; // Import the new page
+import ScannerDashboardPage from "./pages/dashboard/ScannerDashboard";
+import RegistrationsPageWrapper from "./pages/dashboard/RegistrationsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +67,16 @@ const App = () => (
                   <Route path="/scanner/:eventId" element={
                     <ProtectedRoute>
                       <EventScannerPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/dashboard/scanner/:eventId" element={
+                    <ProtectedRoute>
+                      <ScannerDashboardPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/dashboard/registrations/:eventId" element={
+                    <ProtectedRoute>
+                      <RegistrationsPageWrapper />
                     </ProtectedRoute>
                   } />
                   <Route path="/receipt" element={<Receipt />} />

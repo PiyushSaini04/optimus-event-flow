@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Calendar, Users, Activity, CheckCircle, Edit3, Eye, Ticket } from 'lucide-react';
-import { Camera } from 'lucide-react';
+import { Plus, Calendar, Users, Activity, CheckCircle, Edit3, Eye, Ticket, Camera, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,13 +11,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import ProfileCard from '@/components/ProfileCard';
 import MyEventsTicket from '@/components/MyEventsTicket';
-import RegisterOrganizationModal from '@/components/RegisterOrganizationModal';
 
 interface UserProfile {
   name: string;
   role: string;
   location?: string;
   phone_number?: string;
+  photo?: string;
+  organisation?: string;
 }
 
 interface Event {
@@ -62,7 +62,6 @@ const Dashboard = () => {
     eventTitle: string;
     registrationId?: string;
   } | null>(null);
-  const [showOrgModal, setShowOrgModal] = useState(false);
   const [userOrganization, setUserOrganization] = useState<any>(null);
   const [stats, setStats] = useState({
     eventsParticipated: 0,
@@ -104,18 +103,18 @@ const Dashboard = () => {
   const handleCreateEventClick = () => {
     if (!userOrganization) {
       toast({
-        title: "Organization Required",
-        description: "You need to register an organization before creating events.",
+        title: "Organisation Required",
+        description: "You need to register an organisation before creating events.",
         variant: "destructive",
       });
-      setShowOrgModal(true);
+      navigate('/create-event'); // Let CreateEvent page handle org registration
       return;
     }
 
     if (userOrganization.status === 'pending') {
       toast({
-        title: "Organization Pending",
-        description: "Your organization is pending approval. Please wait for admin approval.",
+        title: "Organisation Pending",
+        description: "Your organisation is pending approval. Please wait for admin approval.",
         variant: "destructive",
       });
       return;
@@ -123,8 +122,8 @@ const Dashboard = () => {
 
     if (userOrganization.status === 'rejected') {
       toast({
-        title: "Organization Rejected",
-        description: "Your organization was rejected. Please contact admin for more information.",
+        title: "Organisation Rejected",
+        description: "Your organisation was rejected. Please contact admin for more information.",
         variant: "destructive",
       });
       return;
@@ -133,53 +132,6 @@ const Dashboard = () => {
     navigate('/create-event');
   };
 
-  const handleRegisterOrganization = async (orgData: {
-    name: string;
-    description: string;
-    website: string;
-    contact_email: string;
-    phone_number: string;
-  }) => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('organizations')
-        .insert({
-          name: orgData.name,
-          description: orgData.description,
-          owner_id: user.id,
-          status: 'pending'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setUserOrganization(data);
-      setShowOrgModal(false);
-      toast({
-        title: "Success",
-        description: "Organization registered successfully! Awaiting approval.",
-      });
-    } catch (error) {
-      console.error('Error registering organization:', error);
-      
-      if (error.code === '23505' || error.message?.includes('organizations_name_unique')) {
-        toast({
-          title: "Organization Name Taken",
-          description: "An organization with this name already exists. Please choose a different name.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to register organization.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
   const fetchProfile = async () => {
     if (!user) return;
     try {
@@ -298,12 +250,19 @@ const Dashboard = () => {
         .from('profiles')
         .update({
           name: updatedData.name,
+          photo: updatedData.photo,
+          phone_number: updatedData.phone_number,
         })
         .eq('user_id', user.id);
 
       if (error) throw error;
 
-      setProfile(prev => prev ? { ...prev, name: updatedData.name } : null);
+      setProfile(prev => prev ? { 
+        ...prev, 
+        name: updatedData.name,
+        photo: updatedData.photo,
+        phone_number: updatedData.phone_number
+      } : null);
       toast({
         title: "Success",
         description: "Profile updated successfully!",
@@ -403,7 +362,7 @@ const Dashboard = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold">Organization Status</h3>
+                    <h3 className="text-lg font-semibold">Organisation Status</h3>
                     <p className="text-muted-foreground">{userOrganization.name}</p>
                   </div>
                   <Badge 
@@ -417,7 +376,7 @@ const Dashboard = () => {
                 </div>
                 {userOrganization.status === 'pending' && (
                   <p className="text-sm text-muted-foreground mt-2">
-                    Your organization is pending approval. You'll be able to create events once approved.
+                    Your organisation is pending approval. You'll be able to create events once approved.
                   </p>
                 )}
               </CardContent>
@@ -584,10 +543,20 @@ const Dashboard = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => navigate(`/scanner/${event.id}`)}
+                            onClick={() => navigate(`/dashboard/scanner/${event.id}`)}
                           >
                             <Camera className="h-4 w-4 mr-1" />
                             Scanner
+                          </Button>
+                        )}
+                        {event.created_by === user?.id && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/dashboard/registrations/${event.id}`)}
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            Registrations
                           </Button>
                         )}
                       </div>
@@ -610,12 +579,6 @@ const Dashboard = () => {
           />
         )}
       </div>
-      {/* Organization Registration Modal */}
-      <RegisterOrganizationModal
-        isOpen={showOrgModal}
-        onClose={() => setShowOrgModal(false)}
-        onRegisterOrganization={handleRegisterOrganization}
-      />
     </div>
 
   );
