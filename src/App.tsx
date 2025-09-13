@@ -26,6 +26,7 @@ import Receipt from "./pages/Receipt";
 import EventCheckIn from "./pages/EventCheckIn";
 import ScannerDashboardPage from "./pages/dashboard/ScannerDashboard";
 import RegistrationsPageWrapper from "./pages/dashboard/RegistrationsPage";
+import CheckInDashboard from "./pages/dashboard/events/CheckInDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -107,6 +108,12 @@ const App = () => (
                         <RegistrationsPageWrapper />
                       </ProtectedRoute>
                     }
+                  />
+
+                  {/* Unified Check-in Dashboard */}
+                  <Route
+                    path="/dashboard/events/:eventId/checkin"
+                    element={<CheckInDashboard />}
                   />
 
                   <Route path="/receipt" element={<Receipt />} />
