@@ -12,8 +12,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthContext";
-import { useLocation } from "react-router-dom";
 import OrganisationRegistrationModal from "@/components/organisation/OrganisationRegistrationModal";
+import { useLocation, useParams } from "react-router-dom";
 
 interface Organization {
   id: string;
@@ -41,6 +41,8 @@ interface Event {
   created_by: string | null;
   organization_id: string;
 }
+
+
 
 const CreateEvent = () => {
   const navigate = useNavigate();
@@ -258,8 +260,7 @@ const CreateEvent = () => {
           ...commonData,
           organization_id: organization.id,
           created_by: user?.id,
-          is_published: true,
-          status: 'pending'
+          status: "pending", 
         });
 
         if (error) throw error;

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import EventScanner from '@/components/EventScanner';
+import EventScanner from '@/components/events/ScannerDashboard';
 
 const EventScannerPage = () => {
   const { eventId } = useParams<{ eventId: string }>();
