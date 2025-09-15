@@ -83,7 +83,10 @@ const EventHub = () => {
           created_at,
           organization_id,
           status
-        `);
+        `)
+
+        .eq("status", "approved"); 
+        // Only fetch approved events by default
 
       // Removed status filter
 

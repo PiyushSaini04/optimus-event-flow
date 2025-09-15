@@ -21,15 +21,12 @@ import Posts from "./pages/Posts";
 import Gallery from "./pages/Gallery";
 import Team from "./pages/Team";
 import JoinUs from "./pages/JoinUs";
-import EventScannerPage from "./pages/EventScannerPage";
 import Receipt from "./pages/Receipt";
-import EventCheckIn from "./pages/EventCheckIn";
-import ScannerDashboardPage from "./pages/dashboard/ScannerDashboard";
-import RegistrationsPageWrapper from "./pages/dashboard/RegistrationsPage";
 import CheckInDashboard from "./pages/dashboard/events/CheckInDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -49,13 +46,23 @@ const App = () => (
                   <Route path="/events/:id" element={<EventDetail />} />
                   
                   <Route
-                      path="/edit-event/:id"
-                      element={
-                        <ProtectedRoute>
-                          <CreateEvent />
-                        </ProtectedRoute>
-                      }
-                    />
+                    path="/create-event"
+                    element={
+                      <ProtectedRoute>
+                        <CreateEvent />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Edit Event */}
+                  <Route
+                    path="/edit-event/:id"
+                    element={
+                      <ProtectedRoute>
+                        <CreateEvent />
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* Dashboard */}
                   <Route
@@ -87,7 +94,7 @@ const App = () => (
                     path="/scanner/:eventId"
                     element={
                       <ProtectedRoute>
-                        <EventScannerPage />
+                        <CheckInDashboard />
                       </ProtectedRoute>
                     }
                   />
@@ -95,7 +102,7 @@ const App = () => (
                     path="/dashboard/scanner/:eventId"
                     element={
                       <ProtectedRoute>
-                        <ScannerDashboardPage />
+                        <CheckInDashboard />
                       </ProtectedRoute>
                     }
                   />
@@ -105,7 +112,7 @@ const App = () => (
                     path="/dashboard/registrations/:eventId"
                     element={
                       <ProtectedRoute>
-                        <RegistrationsPageWrapper />
+                        <CheckInDashboard />
                       </ProtectedRoute>
                     }
                   />
@@ -117,7 +124,7 @@ const App = () => (
                   />
 
                   <Route path="/receipt" element={<Receipt />} />
-                  <Route path="/check-in/:eventId" element={<EventCheckIn />} />
+                  <Route path="/check-in/:eventId" element={<CheckInDashboard />} />
 
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />

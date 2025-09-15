@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Share, Mail, Calendar, Clock } from 'lucide-react';
+import { Share, Mail, Calendar, Clock, CheckCircle2 } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthContext';
@@ -40,6 +40,9 @@ const ShareAccessModal = ({ isOpen, onClose, eventId, eventTitle }: ShareAccessM
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + parseInt(expiryHours));
 
+      // Generate token manually
+      const token = crypto.randomUUID();
+
       // Create access record
       const { data, error } = await supabase
         .from('event_dashboard_access')
@@ -47,6 +50,7 @@ const ShareAccessModal = ({ isOpen, onClose, eventId, eventTitle }: ShareAccessM
           event_id: eventId,
           granted_by: user.id,
           email: email.trim(),
+          access_token: token,   // 👈 Added this
           expires_at: expiresAt.toISOString()
         })
         .select('access_token')
@@ -69,6 +73,7 @@ const ShareAccessModal = ({ isOpen, onClose, eventId, eventTitle }: ShareAccessM
             grantedBy: user.user_metadata?.name || user.email
           }
         });
+
       } catch (emailError) {
         console.error('Error sending email:', emailError);
         // Don't fail the whole operation if email fails
