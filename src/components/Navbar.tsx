@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, Shield } from "lucide-react";
+import { Menu, X, User, LogOut, Shield, Building2 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "./AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import NotificationBell from "./NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +24,7 @@ const Navbar = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userOrganisation, setUserOrganisation] = useState<any>(null);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -35,6 +37,15 @@ const Navbar = () => {
             .single();
 
           setIsAdmin(profile?.role === "admin");
+
+          // Check if user has an organisation
+          const { data: organisation } = await supabase
+            .from("organizations")
+            .select("*")
+            .eq("owner_id", user.id)
+            .single();
+
+          setUserOrganisation(organisation);
         } catch (error) {
           console.error("Error checking admin status:", error);
         }
@@ -94,6 +105,7 @@ const Navbar = () => {
             {/* Right Side */}
             <div className="ml-auto flex items-center space-x-4">
               <ThemeToggle />
+              {user && <NotificationBell />}
 
               {/* User Dropdown */}
               {user ? (
@@ -130,6 +142,15 @@ const Navbar = () => {
                         <span>Dashboard</span>
                       </Link>
                     </DropdownMenuItem>
+
+                    {userOrganisation && userOrganisation.status === 'approved' && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/organisation-dashboard" className="flex items-center">
+                          <Building2 className="mr-2 h-4 w-4" />
+                          <span>Organisation Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
 
                     {isAdmin && (
                       <DropdownMenuItem asChild>
@@ -191,6 +212,12 @@ const Navbar = () => {
                     <Button asChild variant="outline" className="w-full mt-2">
                       <Link to="/dashboard">Dashboard</Link>
                     </Button>
+
+                    {userOrganisation && userOrganisation.status === 'approved' && (
+                      <Button asChild variant="outline" className="w-full mt-2">
+                        <Link to="/organisation-dashboard">Organisation Dashboard</Link>
+                      </Button>
+                    )}
 
                     <Button variant="outline" className="w-full" onClick={handleSignOut}>
                       Sign Out

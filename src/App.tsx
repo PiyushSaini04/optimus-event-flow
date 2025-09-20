@@ -18,6 +18,7 @@ import EventDetail from "./pages/EventDetail";
 import CreateEvent from "./pages/CreateEvent";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import OrganisationDashboard from "./pages/OrganisationDashboard";
 import Posts from "./pages/Posts";
 import Gallery from "./pages/Gallery";
 import Team from "./pages/Team";
@@ -82,6 +83,16 @@ const App = () => (
                     element={
                       <ProtectedRoute roles={["organiser"]}>
                         <AdminDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Organisation Dashboard */}
+                  <Route
+                    path="/organisation-dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <OrganisationDashboard />
                       </ProtectedRoute>
                     }
                   />

@@ -334,12 +334,28 @@ const AdminDashboard = () => {
 
   const updateOrganizationStatus = async (orgId: string, status: string) => {
     try {
+      // Get organization details before updating
+      const { data: orgData } = await supabase
+        .from("organizations")
+        .select("name, owner_id")
+        .eq("id", orgId)
+        .single();
+
       const { error } = await supabase
         .from("organizations")
         .update({ status })
         .eq("id", orgId);
 
       if (error) throw error;
+
+      // Send notification if approved
+      if (status === 'approved' && orgData) {
+        await supabase.rpc('send_approval_notification', {
+          target_user_id: orgData.owner_id,
+          notification_title: 'Organisation Approved! 🎉',
+          notification_message: `Your organisation "${orgData.name}" has been approved. You can now create and manage events.`
+        });
+      }
 
       toast({
         title: "Success",
@@ -358,12 +374,28 @@ const AdminDashboard = () => {
 
   const updateEventStatus = async (eventId: string, status: string) => {
     try {
+      // Get event details before updating
+      const { data: eventData } = await supabase
+        .from("events")
+        .select("title, created_by")
+        .eq("id", eventId)
+        .single();
+
       const { error } = await supabase
         .from("events")
         .update({ status })
         .eq("id", eventId);
 
       if (error) throw error;
+
+      // Send notification if approved
+      if (status === 'approved' && eventData) {
+        await supabase.rpc('send_approval_notification', {
+          target_user_id: eventData.created_by,
+          notification_title: 'Event Approved! 🎉',
+          notification_message: `Your event "${eventData.title}" has been approved and is now live for registrations.`
+        });
+      }
 
       toast({
         title: "Success",
