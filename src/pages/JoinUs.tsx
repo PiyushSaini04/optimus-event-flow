@@ -221,44 +221,7 @@ const JoinUs = () => {
           </p>
         </div>
 
-        {/* Benefits Section */}
-        <div className="mb-12">
-          {/* First row - two boxes side by side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-            <Card className="card-modern text-center fade-up hover-scale">
-              <CardContent className="p-4 md:p-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-primary/20 rounded-full mb-3 md:mb-4">
-                  <GraduationCap className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-                </div>
-                <h3 className="text-base md:text-lg font-semibold mb-2">Skill Development</h3>
-                <p className="text-muted-foreground text-xs md:text-sm">Access to cutting-edge workshops and hands-on learning experiences</p>
-              </CardContent>
-            </Card>
-
-            <Card className="card-modern text-center fade-up hover-scale" style={{ animationDelay: "0.1s" }}>
-              <CardContent className="p-4 md:p-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-primary/20 rounded-full mb-3 md:mb-4">
-                  <User className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-                </div>
-                <h3 className="text-base md:text-lg font-semibold mb-2">Networking</h3>
-                <p className="text-muted-foreground text-xs md:text-sm">Connect with like-minded peers and industry professionals</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Second row - one box full width */}
-          <div className="grid grid-cols-1">
-            <Card className="card-modern text-center fade-up hover-scale" style={{ animationDelay: "0.2s" }}>
-              <CardContent className="p-4 md:p-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-primary/20 rounded-full mb-3 md:mb-4">
-                  <Heart className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-                </div>
-                <h3 className="text-base md:text-lg font-semibold mb-2">Innovation</h3>
-                <p className="text-muted-foreground text-xs md:text-sm">Work on real projects and contribute to meaningful solutions</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+       
 
         {/* Application Form or Closed Message */}
         {!recruitmentActive ? (
