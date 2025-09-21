@@ -24,6 +24,7 @@ import Posts from "./pages/Posts";
 import Gallery from "./pages/Gallery";
 import Team from "./pages/Team";
 import JoinUs from "./pages/JoinUs";
+import RegisterOrganization from "./pages/RegisterOrganization";
 import Receipt from "./pages/Receipt";
 import CheckInDashboard from "./pages/dashboard/events/CheckInDashboard";
 import NotFound from "./pages/NotFound";
@@ -102,6 +103,16 @@ const App = () => (
                   <Route path="/gallery" element={<Gallery />} />
                   <Route path="/team" element={<Team />} />
                   <Route path="/join-us" element={<JoinUs />} />
+                  
+                  {/* Organization Registration */}
+                  <Route
+                    path="/register-organization"
+                    element={
+                      <ProtectedRoute>
+                        <RegisterOrganization />
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* Scanners */}
                   <Route

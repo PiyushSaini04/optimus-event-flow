@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import EventRegistrationsModal from "@/components/EventRegistrationsModal";
+import PostManagement from "@/components/admin/PostManagement";
 
 interface UserProfile {
   id: string;
@@ -533,6 +534,7 @@ const AdminDashboard = () => {
             { id: "recruitment", label: "Recruitment Management", icon: Users },
             { id: "organizations", label: "Organizations", icon: Building },
             { id: "events", label: "Events", icon: Calendar },
+            { id: "posts", label: "Post Management", icon: FileText },
             { id: "users", label: "User Management", icon: Shield },
             { id: "downloads", label: "Download Data", icon: Download },
           ].map(({ id, label, icon: Icon }) => (
@@ -811,6 +813,13 @@ const AdminDashboard = () => {
                 </Table>
               </CardContent>
             </Card>
+          </motion.div>
+        )}
+
+        {/* Post Management Tab */}
+        {activeTab === "posts" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <PostManagement />
           </motion.div>
         )}
 

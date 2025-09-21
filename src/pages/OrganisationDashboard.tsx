@@ -1,22 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Plus, 
-  Calendar, 
-  Activity, 
-  CheckCircle, 
-  FileText,
-  Camera,
-  Heart,
-  MessageCircle
-} from 'lucide-react';
+import { Plus, Calendar, Activity, CheckCircle, FileText, Camera } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/components/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import OrganizationProfileCard from '@/components/organization/OrganizationProfileCard';
 
 interface Event {
   id: string;
@@ -33,23 +25,14 @@ interface Event {
   created_by: string;
 }
 
-interface Post {
-  id: string;
-  title: string;
-  description: string;
-  image_url: string | null;
-  created_at: string;
-  organisation_id: string;
-  likes_count?: number;
-  comments_count?: number;
-}
-
 interface Organisation {
   id: string;
   name: string;
   description: string;
   status: string;
   created_at: string;
+  avatar_url?: string;
+  owner_id: string;
 }
 
 const OrganisationDashboard = () => {
@@ -59,14 +42,11 @@ const OrganisationDashboard = () => {
 
   const [organisation, setOrganisation] = useState<Organisation | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [stats, setStats] = useState({
     totalEvents: 0,
     approvedEvents: 0,
-    totalPosts: 0,
-    totalEngagement: 0
   });
 
   useEffect(() => {
@@ -109,7 +89,6 @@ const OrganisationDashboard = () => {
       setOrganisation(orgData);
       await Promise.all([
         fetchOrganisationEvents(orgData.id),
-        fetchOrganisationPosts(orgData.id),
         fetchStats(orgData.id)
       ]);
     } catch (error) {
@@ -135,59 +114,16 @@ const OrganisationDashboard = () => {
     }
   };
 
-  const fetchOrganisationPosts = async (organisationId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('organisation_id', organisationId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const postsWithEngagement = await Promise.all(
-        (data || []).map(async (post) => {
-          const { data: engagement } = await supabase
-            .rpc('get_post_engagement', { post_id_param: post.id });
-          
-          return {
-            ...post,
-            likes_count: engagement?.[0]?.likes_count || 0,
-            comments_count: engagement?.[0]?.comments_count || 0
-          };
-        })
-      );
-
-      setPosts(postsWithEngagement);
-    } catch (error) {
-      console.error('Error fetching organisation posts:', error);
-    }
-  };
-
   const fetchStats = async (organisationId: string) => {
     try {
-      const [eventsData, postsData] = await Promise.all([
+      const [eventsData] = await Promise.all([
         supabase.from('events').select('id, status').eq('organization_id', organisationId),
-        supabase.from('posts').select('id').eq('organisation_id', organisationId)
       ]);
 
       const totalEvents = eventsData.data?.length || 0;
       const approvedEvents = eventsData.data?.filter(e => e.status === 'approved').length || 0;
-      const totalPosts = postsData.data?.length || 0;
 
-      const { data: likesData } = await supabase
-        .from('post_likes')
-        .select('id, posts!inner(organisation_id)')
-        .eq('posts.organisation_id', organisationId);
-
-      const { data: commentsData } = await supabase
-        .from('post_comments')
-        .select('id, posts!inner(organisation_id)')
-        .eq('posts.organisation_id', organisationId);
-
-      const totalEngagement = (likesData?.length || 0) + (commentsData?.length || 0);
-
-      setStats({ totalEvents, approvedEvents, totalPosts, totalEngagement });
+      setStats({ totalEvents, approvedEvents });
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
@@ -237,6 +173,11 @@ const OrganisationDashboard = () => {
           transition={{ duration: 0.6 }}
           className="space-y-8"
         >
+          {/* Organization Profile Card */}
+          {organisation && (
+            <OrganizationProfileCard organization={organisation} />
+          )}
+
           {/* Header */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
             <div>
@@ -260,12 +201,11 @@ const OrganisationDashboard = () => {
                 <FileText className="h-4 w-4 mr-2" />
                 Create Post
               </Button>
-
             </div>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
+          <div className="grid grid-cols-2 gap-4 lg:gap-6 mb-8">
             <Card className="hover-scale">
               <CardContent className="p-4 lg:p-6 flex justify-between items-center">
                 <div>
@@ -282,24 +222,6 @@ const OrganisationDashboard = () => {
                   <p className="text-xl lg:text-2xl font-bold">{stats.approvedEvents}</p>
                 </div>
                 <CheckCircle className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
-              </CardContent>
-            </Card>
-            <Card className="hover-scale">
-              <CardContent className="p-4 lg:p-6 flex justify-between items-center">
-                <div>
-                  <p className="text-xs lg:text-sm text-muted-foreground">Total Posts</p>
-                  <p className="text-xl lg:text-2xl font-bold">{stats.totalPosts}</p>
-                </div>
-                <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-purple-500" />
-              </CardContent>
-            </Card>
-            <Card className="hover-scale">
-              <CardContent className="p-4 lg:p-6 flex justify-between items-center">
-                <div>
-                  <p className="text-xs lg:text-sm text-muted-foreground">Total Engagement</p>
-                  <p className="text-xl lg:text-2xl font-bold">{stats.totalEngagement}</p>
-                </div>
-                <Activity className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
               </CardContent>
             </Card>
           </div>
@@ -349,46 +271,6 @@ const OrganisationDashboard = () => {
               )}
             </CardContent>
           </Card>
-
-          {/* Posts Section */}
-          <Card className="card-modern">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">Organisation Posts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {posts.length === 0 ? (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No posts created yet.</p>
-                  <Button onClick={() => navigate('/create-post')} className="mt-4 btn-hero">
-                    Create Your First Post
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {posts.map(post => (
-                    <div key={post.id} className="p-4 border border-border/50 rounded-lg hover:bg-muted/20 transition-colors">
-                      <div className="flex items-start justify-between mb-3">
-                        <h4 className="font-semibold text-sm md:text-base">{post.title}</h4>
-                        <span className="text-xs text-muted-foreground">{formatDate(post.created_at)}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{post.description}</p>
-                      {post.image_url && (
-                        <div className="mb-3 rounded-lg overflow-hidden">
-                          <img src={post.image_url} alt={post.title} className="w-full h-48 object-cover" />
-                        </div>
-                      )}
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <div className="flex items-center space-x-1"><Heart className="h-4 w-4" /> <span>{post.likes_count || 0}</span></div>
-                        <div className="flex items-center space-x-1"><MessageCircle className="h-4 w-4" /> <span>{post.comments_count || 0}</span></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
         </motion.div>
       </div>
     </div>

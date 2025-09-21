@@ -6,7 +6,6 @@ import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "./AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import NotificationBell from "./NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -106,7 +105,6 @@ const Navbar = () => {
             {/* Right Side */}
             <div className="ml-auto flex items-center space-x-4">
               <ThemeToggle />
-              {user && <NotificationBell />}
 
               {/* Create Event Button */}
               {userOrganisation && userOrganisation.status === 'approved' && (
@@ -158,7 +156,7 @@ const Navbar = () => {
 
                     {isAdmin && (
                       <DropdownMenuItem asChild>
-                        <Link to="/admin" className="flex items-center">
+                        <Link to="/admin-dashboard" className="flex items-center">
                           <Shield className="mr-2 h-4 w-4" />
                           <span>Admin Dashboard</span>
                         </Link>
@@ -166,6 +164,13 @@ const Navbar = () => {
                     )}
 
                     <DropdownMenuSeparator />
+
+                    <DropdownMenuItem asChild>
+                      <Link to="/register-organization" className="flex items-center">
+                        <Building2 className="mr-2 h-4 w-4" />
+                        <span>Register Organization</span>
+                      </Link>
+                    </DropdownMenuItem>
 
                     <DropdownMenuItem onClick={handleSignOut} className="flex items-center">
                       <LogOut className="mr-2 h-4 w-4" />
