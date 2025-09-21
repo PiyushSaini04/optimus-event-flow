@@ -10,6 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import BottomNav from "./components/BottomNav";
+import CreatePost from "./components/CreatePost"; // Import it
 
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
@@ -116,6 +117,14 @@ const App = () => (
                     element={
                       <ProtectedRoute>
                         <CheckInDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/create-post"
+                    element={
+                      <ProtectedRoute>
+                        <CreatePost organisationId={""} />
                       </ProtectedRoute>
                     }
                   />

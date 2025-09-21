@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, Shield, Building2 } from "lucide-react";
+import { Menu, X, User, LogOut, Shield, Building2, Plus } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "./AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -98,6 +98,7 @@ const Navbar = () => {
             <div className="absolute left-1/2 transform -translate-x-1/2 flex space-x-8">
               <Link to="/" className="text-sm font-medium hover:text-primary">Home</Link>
               <Link to="/events" className="text-sm font-medium hover:text-primary">Events</Link>
+              <Link to="/posts" className="text-sm font-medium hover:text-primary">Posts</Link>
               <Link to="/gallery" className="text-sm font-medium hover:text-primary">Gallery</Link>
               <Link to="/join-us" className="text-sm font-medium hover:text-primary">Join Us</Link>
             </div>
@@ -106,6 +107,16 @@ const Navbar = () => {
             <div className="ml-auto flex items-center space-x-4">
               <ThemeToggle />
               {user && <NotificationBell />}
+
+              {/* Create Event Button */}
+              {userOrganisation && userOrganisation.status === 'approved' && (
+                <Button asChild className="btn-hero hidden lg:flex">
+                  <Link to="/create-event">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Event
+                  </Link>
+                </Button>
+              )}
 
               {/* User Dropdown */}
               {user ? (
@@ -135,13 +146,6 @@ const Navbar = () => {
                     </DropdownMenuLabel>
 
                     <DropdownMenuSeparator />
-
-                    <DropdownMenuItem asChild>
-                      <Link to="/dashboard" className="flex items-center">
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Dashboard</span>
-                      </Link>
-                    </DropdownMenuItem>
 
                     {userOrganisation && userOrganisation.status === 'approved' && (
                       <DropdownMenuItem asChild>
@@ -208,10 +212,6 @@ const Navbar = () => {
                     </Avatar>
                     <p className="text-lg font-medium">{user.user_metadata?.name || "User"}</p>
                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-
-                    <Button asChild variant="outline" className="w-full mt-2">
-                      <Link to="/dashboard">Dashboard</Link>
-                    </Button>
 
                     {userOrganisation && userOrganisation.status === 'approved' && (
                       <Button asChild variant="outline" className="w-full mt-2">

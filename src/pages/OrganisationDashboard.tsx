@@ -4,26 +4,16 @@ import { motion } from 'framer-motion';
 import { 
   Plus, 
   Calendar, 
-  Users, 
   Activity, 
   CheckCircle, 
-  Eye, 
-  Camera, 
   FileText,
-  Building2,
-  Image,
-  Send,
+  Camera,
   Heart,
-  MessageCircle,
-  Share2
+  MessageCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/components/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -66,20 +56,11 @@ const OrganisationDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [organisation, setOrganisation] = useState<Organisation | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
-  const [creatingPost, setCreatingPost] = useState(false);
-  
-  const [postForm, setPostForm] = useState({
-    title: '',
-    description: '',
-    image: null as File | null
-  });
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const [stats, setStats] = useState({
     totalEvents: 0,
@@ -89,9 +70,7 @@ const OrganisationDashboard = () => {
   });
 
   useEffect(() => {
-    if (user) {
-      checkOrganisationAccess();
-    }
+    if (user) checkOrganisationAccess();
   }, [user]);
 
   const checkOrganisationAccess = async () => {
@@ -101,7 +80,6 @@ const OrganisationDashboard = () => {
     }
 
     try {
-      // Check if user has an approved organisation
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .select('*')
@@ -167,7 +145,6 @@ const OrganisationDashboard = () => {
 
       if (error) throw error;
 
-      // Fetch engagement counts for each post
       const postsWithEngagement = await Promise.all(
         (data || []).map(async (post) => {
           const { data: engagement } = await supabase
@@ -190,21 +167,14 @@ const OrganisationDashboard = () => {
   const fetchStats = async (organisationId: string) => {
     try {
       const [eventsData, postsData] = await Promise.all([
-        supabase
-          .from('events')
-          .select('id, status')
-          .eq('organization_id', organisationId),
-        supabase
-          .from('posts')
-          .select('id')
-          .eq('organisation_id', organisationId)
+        supabase.from('events').select('id, status').eq('organization_id', organisationId),
+        supabase.from('posts').select('id').eq('organisation_id', organisationId)
       ]);
 
       const totalEvents = eventsData.data?.length || 0;
       const approvedEvents = eventsData.data?.filter(e => e.status === 'approved').length || 0;
       const totalPosts = postsData.data?.length || 0;
 
-      // Calculate total engagement (likes + comments)
       const { data: likesData } = await supabase
         .from('post_likes')
         .select('id, posts!inner(organisation_id)')
@@ -217,107 +187,9 @@ const OrganisationDashboard = () => {
 
       const totalEngagement = (likesData?.length || 0) + (commentsData?.length || 0);
 
-      setStats({
-        totalEvents,
-        approvedEvents,
-        totalPosts,
-        totalEngagement
-      });
+      setStats({ totalEvents, approvedEvents, totalPosts, totalEngagement });
     } catch (error) {
       console.error('Error fetching stats:', error);
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Please select an image smaller than 5MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setPostForm(prev => ({ ...prev, image: file }));
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
-
-  const uploadPostImage = async (file: File): Promise<string | null> => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${organisation?.id}/${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('post-images')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('post-images')
-        .getPublicUrl(fileName);
-
-      return data.publicUrl;
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      return null;
-    }
-  };
-
-  const handleCreatePost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!organisation) return;
-
-    setCreatingPost(true);
-    try {
-      let imageUrl = null;
-      
-      if (postForm.image) {
-        imageUrl = await uploadPostImage(postForm.image);
-        if (!imageUrl) {
-          toast({
-            title: "Image upload failed",
-            description: "Failed to upload image. Post will be created without image.",
-            variant: "destructive",
-          });
-        }
-      }
-
-      const { error } = await supabase
-        .from('posts')
-        .insert({
-          organisation_id: organisation.id,
-          title: postForm.title,
-          description: postForm.description,
-          image_url: imageUrl
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Post created!",
-        description: "Your post has been published successfully.",
-      });
-
-      setShowCreatePostModal(false);
-      setPostForm({ title: '', description: '', image: null });
-      setImagePreview(null);
-      
-      // Refresh posts
-      fetchOrganisationPosts(organisation.id);
-      fetchStats(organisation.id);
-    } catch (error) {
-      console.error('Error creating post:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create post. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setCreatingPost(false);
     }
   };
 
@@ -376,76 +248,63 @@ const OrganisationDashboard = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 mt-4 md:mt-0">
-              <Button 
-                onClick={() => setShowCreatePostModal(true)} 
+              <Button onClick={() => navigate('/create-event')} className="btn-hero w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Event
+              </Button>
+              <Button
+                onClick={() => navigate('/create-post', { state: { organisationId: organisation?.id } })}
                 variant="outline"
                 className="w-full sm:w-auto"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Create Post
               </Button>
-              <Button 
-                onClick={() => navigate('/create-event')} 
-                className="btn-hero w-full sm:w-auto"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Event
-              </Button>
+
             </div>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
             <Card className="hover-scale">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs lg:text-sm text-muted-foreground">Total Events</p>
-                    <p className="text-xl lg:text-2xl font-bold">{stats.totalEvents}</p>
-                  </div>
-                  <Calendar className="h-6 w-6 lg:h-8 lg:w-8 text-blue-500" />
+              <CardContent className="p-4 lg:p-6 flex justify-between items-center">
+                <div>
+                  <p className="text-xs lg:text-sm text-muted-foreground">Total Events</p>
+                  <p className="text-xl lg:text-2xl font-bold">{stats.totalEvents}</p>
                 </div>
+                <Calendar className="h-6 w-6 lg:h-8 lg:w-8 text-blue-500" />
               </CardContent>
             </Card>
-
             <Card className="hover-scale">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs lg:text-sm text-muted-foreground">Approved Events</p>
-                    <p className="text-xl lg:text-2xl font-bold">{stats.approvedEvents}</p>
-                  </div>
-                  <CheckCircle className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
+              <CardContent className="p-4 lg:p-6 flex justify-between items-center">
+                <div>
+                  <p className="text-xs lg:text-sm text-muted-foreground">Approved Events</p>
+                  <p className="text-xl lg:text-2xl font-bold">{stats.approvedEvents}</p>
                 </div>
+                <CheckCircle className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
               </CardContent>
             </Card>
-
             <Card className="hover-scale">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs lg:text-sm text-muted-foreground">Total Posts</p>
-                    <p className="text-xl lg:text-2xl font-bold">{stats.totalPosts}</p>
-                  </div>
-                  <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-purple-500" />
+              <CardContent className="p-4 lg:p-6 flex justify-between items-center">
+                <div>
+                  <p className="text-xs lg:text-sm text-muted-foreground">Total Posts</p>
+                  <p className="text-xl lg:text-2xl font-bold">{stats.totalPosts}</p>
                 </div>
+                <FileText className="h-6 w-6 lg:h-8 lg:w-8 text-purple-500" />
               </CardContent>
             </Card>
-
             <Card className="hover-scale">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs lg:text-sm text-muted-foreground">Total Engagement</p>
-                    <p className="text-xl lg:text-2xl font-bold">{stats.totalEngagement}</p>
-                  </div>
-                  <Activity className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
+              <CardContent className="p-4 lg:p-6 flex justify-between items-center">
+                <div>
+                  <p className="text-xs lg:text-sm text-muted-foreground">Total Engagement</p>
+                  <p className="text-xl lg:text-2xl font-bold">{stats.totalEngagement}</p>
                 </div>
+                <Activity className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
               </CardContent>
             </Card>
           </div>
 
-          {/* Organisation Events Section */}
+          {/* Events Section */}
           <Card className="card-modern">
             <CardHeader>
               <CardTitle className="text-lg md:text-xl">Organisation Events</CardTitle>
@@ -454,31 +313,20 @@ const OrganisationDashboard = () => {
               {events.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    No events created yet.
-                  </p>
+                  <p className="text-muted-foreground">No events created yet.</p>
                   <Button onClick={() => navigate('/create-event')} className="mt-4 btn-hero">
                     Create Your First Event
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {events.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border border-border/50 rounded-lg hover:bg-muted/20 transition-colors"
-                    >
+                  {events.map(event => (
+                    <div key={event.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border border-border/50 rounded-lg hover:bg-muted/20 transition-colors">
                       <div className="flex-1 mb-2 md:mb-0">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <h4 className="font-semibold text-sm md:text-base">
-                            {event.title}
-                          </h4>
-                          <Badge className={getCategoryColor(event.category || "Workshop")}>
-                            {event.category || "Workshop"}
-                          </Badge>
-                          <Badge variant={event.status === 'approved' ? 'default' : 'secondary'}>
-                            {event.status}
-                          </Badge>
+                          <h4 className="font-semibold text-sm md:text-base">{event.title}</h4>
+                          <Badge className={getCategoryColor(event.category || "Workshop")}>{event.category || "Workshop"}</Badge>
+                          <Badge variant={event.status === 'approved' ? 'default' : 'secondary'}>{event.status}</Badge>
                           {event.ticket_price && event.ticket_price > 0 && (
                             <Badge variant="outline">₹{event.ticket_price}</Badge>
                           )}
@@ -487,28 +335,12 @@ const OrganisationDashboard = () => {
                           {formatDate(event.start_date)} • {event.location || "Online"}
                         </p>
                       </div>
-
                       <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            navigate(`/edit-event/${event.id}`, {
-                              state: { eventData: event },
-                            })
-                          }
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Edit
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/edit-event/${event.id}`, { state: { eventData: event } })}>
+                          <Plus className="h-4 w-4 mr-1" /> Edit
                         </Button>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/dashboard/events/${event.id}/checkin`)}
-                        >
-                          <Camera className="h-4 w-4 mr-1" />
-                          Check-in
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/events/${event.id}/checkin`)}>
+                          <Camera className="h-4 w-4 mr-1" /> Check-in
                         </Button>
                       </div>
                     </div>
@@ -518,7 +350,7 @@ const OrganisationDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Organisation Posts Section */}
+          {/* Posts Section */}
           <Card className="card-modern">
             <CardHeader>
               <CardTitle className="text-lg md:text-xl">Organisation Posts</CardTitle>
@@ -527,50 +359,28 @@ const OrganisationDashboard = () => {
               {posts.length === 0 ? (
                 <div className="text-center py-8">
                   <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    No posts created yet.
-                  </p>
-                  <Button onClick={() => setShowCreatePostModal(true)} className="mt-4 btn-hero">
+                  <p className="text-muted-foreground">No posts created yet.</p>
+                  <Button onClick={() => navigate('/create-post')} className="mt-4 btn-hero">
                     Create Your First Post
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {posts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="p-4 border border-border/50 rounded-lg hover:bg-muted/20 transition-colors"
-                    >
+                  {posts.map(post => (
+                    <div key={post.id} className="p-4 border border-border/50 rounded-lg hover:bg-muted/20 transition-colors">
                       <div className="flex items-start justify-between mb-3">
                         <h4 className="font-semibold text-sm md:text-base">{post.title}</h4>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(post.created_at)}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{formatDate(post.created_at)}</span>
                       </div>
-                      
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {post.description}
-                      </p>
-
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{post.description}</p>
                       {post.image_url && (
                         <div className="mb-3 rounded-lg overflow-hidden">
-                          <img 
-                            src={post.image_url} 
-                            alt={post.title}
-                            className="w-full h-48 object-cover"
-                          />
+                          <img src={post.image_url} alt={post.title} className="w-full h-48 object-cover" />
                         </div>
                       )}
-
                       <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <div className="flex items-center space-x-1">
-                          <Heart className="h-4 w-4" />
-                          <span>{post.likes_count || 0}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <MessageCircle className="h-4 w-4" />
-                          <span>{post.comments_count || 0}</span>
-                        </div>
+                        <div className="flex items-center space-x-1"><Heart className="h-4 w-4" /> <span>{post.likes_count || 0}</span></div>
+                        <div className="flex items-center space-x-1"><MessageCircle className="h-4 w-4" /> <span>{post.comments_count || 0}</span></div>
                       </div>
                     </div>
                   ))}
@@ -578,94 +388,9 @@ const OrganisationDashboard = () => {
               )}
             </CardContent>
           </Card>
+
         </motion.div>
       </div>
-
-      {/* Create Post Modal */}
-      <Dialog open={showCreatePostModal} onOpenChange={setShowCreatePostModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Post</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleCreatePost} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="post-title">Title *</Label>
-              <Input
-                id="post-title"
-                value={postForm.title}
-                onChange={(e) => setPostForm(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Enter post title"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="post-description">Description *</Label>
-              <Textarea
-                id="post-description"
-                value={postForm.description}
-                onChange={(e) => setPostForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Write your post content..."
-                rows={4}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="post-image">Image (Optional)</Label>
-              <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
-                {imagePreview ? (
-                  <div className="relative">
-                    <img src={imagePreview} alt="Preview" className="w-full h-32 object-cover rounded" />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="absolute top-2 right-2"
-                      onClick={() => {
-                        setImagePreview(null);
-                        setPostForm(prev => ({ ...prev, image: null }));
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ) : (
-                  <div>
-                    <Image className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Upload an image</p>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setShowCreatePostModal(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={creatingPost}
-                className="flex-1"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                {creatingPost ? "Creating..." : "Create Post"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

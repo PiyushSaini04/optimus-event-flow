@@ -29,14 +29,19 @@ const OrganisationRegistrationModal: React.FC<OrganisationRegistrationModalProps
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
   });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
   const [nameAvailable, setNameAvailable] = useState<boolean | null>(null);
   const [checkingName, setCheckingName] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Check organisation name availability
   const checkNameAvailability = async (name: string) => {
     if (!name.trim()) {
       setNameAvailable(null);
@@ -45,26 +50,16 @@ const OrganisationRegistrationModal: React.FC<OrganisationRegistrationModalProps
 
     setCheckingName(true);
     try {
-      const { data, error } = await supabase.rpc('get_organization_by_name', {
-        org_name: name.trim()
-      });
-
-      if (error) throw error;
-      setNameAvailable(!data.exists);
+      const { data } = await supabase
+        .from('organizations')
+        .select('id')
+        .eq('name', name.trim())
+        .maybeSingle();
+      
+      setNameAvailable(!data);
     } catch (error) {
-      console.error('Error checking name availability:', error);
-      // Fallback to direct query if function doesn't exist
-      try {
-        const { data } = await supabase
-          .from('organizations')
-          .select('id')
-          .eq('name', name.trim())
-          .single();
-        
-        setNameAvailable(!data);
-      } catch {
-        setNameAvailable(true); // Assume available if check fails
-      }
+      console.error("Name check error:", error);
+      setNameAvailable(true); // fallback
     } finally {
       setCheckingName(false);
     }
@@ -72,18 +67,55 @@ const OrganisationRegistrationModal: React.FC<OrganisationRegistrationModalProps
 
   const handleNameChange = (value: string) => {
     setFormData(prev => ({ ...prev, name: value }));
-    
-    // Debounce name checking
+
     const timeoutId = setTimeout(() => {
       checkNameAvailability(value);
     }, 500);
-    
+
     return () => clearTimeout(timeoutId);
+  };
+
+  // Handle avatar selection
+  const handleAvatarChange = (file: File | null) => {
+    if (file) {
+      setAvatarFile(file);
+      setAvatarUrl(URL.createObjectURL(file));
+    } else {
+      setAvatarFile(null);
+      setAvatarUrl(null);
+    }
+  };
+
+  // Upload avatar to Supabase Storage
+  const uploadAvatar = async (file: File) => {
+    if (!file) throw new Error("No file provided");
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `organization_avatars/${fileName}`;
+
+    // Upload the file
+    const { error: uploadError } = await supabase.storage
+      .from('organisation')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('organisation')
+      .getPublicUrl(filePath);
+
+    if (!urlData || !urlData.publicUrl) {
+      throw new Error('Failed to get public URL');
+    }
+
+    return urlData.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) {
       toast({
         title: "Authentication required",
@@ -102,14 +134,24 @@ const OrganisationRegistrationModal: React.FC<OrganisationRegistrationModalProps
       return;
     }
 
+    if (!avatarFile) {
+      toast({
+        title: "Avatar required",
+        description: "Please upload an organisation photo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
+
     try {
       // Check if user already has an organisation
       const { data: existingOrg } = await supabase
         .from('organizations')
         .select('id')
         .eq('owner_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (existingOrg) {
         toast({
@@ -117,29 +159,40 @@ const OrganisationRegistrationModal: React.FC<OrganisationRegistrationModalProps
           description: "You can only register one organisation per account.",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
 
+      // Upload avatar
+      let avatarPublicUrl = '';
+      try {
+        avatarPublicUrl = await uploadAvatar(avatarFile);
+      } catch (uploadError) {
+        console.error("Avatar upload failed:", uploadError);
+        toast({
+          title: "Avatar upload failed",
+          description: "Failed to upload organisation photo. Please try again.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Insert organisation
       const { data, error } = await supabase
         .from('organizations')
         .insert({
           name: formData.name.trim(),
           description: formData.description.trim() || null,
           owner_id: user.id,
-          status: 'pending'
+          avatar_url: avatarPublicUrl,
+          status: 'pending',
         })
         .select()
         .single();
 
       if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-          toast({
-            title: "Name already taken",
-            description: "This organisation name is already registered.",
-            variant: "destructive",
-          });
-          return;
-        }
+        console.error("Supabase insert error:", error);
         throw error;
       }
 
@@ -150,15 +203,18 @@ const OrganisationRegistrationModal: React.FC<OrganisationRegistrationModalProps
 
       onSuccess(data);
       onClose();
-      
+
       // Reset form
       setFormData({ name: "", description: "" });
+      setAvatarFile(null);
+      setAvatarUrl(null);
       setNameAvailable(null);
+
     } catch (error) {
       console.error('Error registering organisation:', error);
       toast({
         title: "Registration failed",
-        description: "Failed to register organisation. Please try again.",
+        description: "Failed to register organisation. Please check console.",
         variant: "destructive",
       });
     } finally {
@@ -175,7 +231,7 @@ const OrganisationRegistrationModal: React.FC<OrganisationRegistrationModalProps
             Register Organisation
           </DialogTitle>
         </DialogHeader>
-        
+
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -185,6 +241,7 @@ const OrganisationRegistrationModal: React.FC<OrganisationRegistrationModalProps
         </Alert>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Organisation Name */}
           <div className="space-y-2">
             <Label htmlFor="org-name">Organisation Name *</Label>
             <Input
@@ -211,36 +268,47 @@ const OrganisationRegistrationModal: React.FC<OrganisationRegistrationModalProps
             )}
           </div>
 
+          {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="org-description">Description</Label>
             <Textarea
               id="org-description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) =>
+                setFormData(prev => ({ ...prev, description: e.target.value }))
+              }
               placeholder="Brief description of your organisation (optional)"
               rows={3}
             />
           </div>
 
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>What happens next?</strong>
-              <ul className="mt-2 text-sm space-y-1">
-                <li>• Your organisation will be submitted for admin review</li>
-                <li>• Approval typically takes 1-2 business days</li>
-                <li>• Once approved, you can create and manage events</li>
-                <li>• You'll receive a notification when approved</li>
-              </ul>
-            </AlertDescription>
-          </Alert>
+          {/* Avatar Upload */}
+          <div className="space-y-2">
+            <Label htmlFor="org-avatar">Organisation Photo *</Label>
+            <Input
+              id="org-avatar"
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                handleAvatarChange(e.target.files ? e.target.files[0] : null)
+              }
+              required
+            />
+            {avatarUrl && (
+              <img
+                src={avatarUrl}
+                alt="Preview"
+                className="h-24 w-24 object-cover rounded-md mt-2"
+              />
+            )}
+          </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isSubmitting || nameAvailable === false || !formData.name.trim()}
             >
               {isSubmitting ? "Registering..." : "Register Organisation"}

@@ -337,6 +337,18 @@ const Dashboard = () => {
                 Create Event
               </Button>
 
+              {/* Organisation Dashboard Button */}
+              {userOrganization && userOrganization.status === 'approved' && (
+                <Button
+                  onClick={() => navigate('/organisation-dashboard')}
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Organisation Dashboard
+                </Button>
+              )}
+
               {(profile?.role === 'organiser' || profile?.role === 'admin') && (
                 <Button
                   onClick={() => navigate('/admin-dashboard')}
@@ -495,85 +507,7 @@ const Dashboard = () => {
           </Card>
 
           {/* My Events Section */}
-          <Card className="card-modern">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">My Events</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {events.length === 0 ? (
-                <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    You haven't created any events yet.
-                  </p>
-                  <Button onClick={handleCreateEventClick} className="mt-4 btn-hero">
-                    Create Your First Event
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {events.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border border-border/50 rounded-lg hover:bg-muted/20 transition-colors"
-                    >
-                      {/* Event Info */}
-                      <div className="flex-1 mb-2 md:mb-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <h4 className="font-semibold text-sm md:text-base">
-                            {event.title}
-                          </h4>
-                          <Badge className={getCategoryColor(event.category || "Workshop")}>
-                            {event.category || "Workshop"}
-                          </Badge>
-                          {event.ticket_price && event.ticket_price > 0 && (
-                            <Badge variant="outline">₹{event.ticket_price}</Badge>
-                          )}
-                        </div>
-                        <p className="text-xs md:text-sm text-muted-foreground">
-                          {formatDate(event.start_date)} • {event.location || "Online"}
-                        </p>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center space-x-2">
-                        
-
-                        {/* Edit */}
-                        {event.created_by === user?.id && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              navigate(`/edit-event/${event.id}`, {
-                                state: { eventData: event },
-                              })
-                            }
-                          >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                        )}
-
-                        {/* Scanner */}
-                        {event.created_by === user?.id && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/dashboard/events/${event.id}/checkin`)}
-                          >
-                            <Camera className="h-4 w-4 mr-1" />
-                            Check-in Dashboard
-                          </Button>
-                        )}
-
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          
 
           {/* Ticket Modal */}
           {selectedTicketEvent && (
