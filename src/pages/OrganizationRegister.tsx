@@ -20,9 +20,9 @@ const OrganizationRegister = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Organization Registration</h1>
+            <h1 className="text-2xl font-bold">Organization Management</h1>
             <p className="text-muted-foreground">
-              Create or join an organization to get started
+              Create, join, or manage your organization
             </p>
           </div>
         </div>
