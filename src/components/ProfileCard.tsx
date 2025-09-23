@@ -1,11 +1,11 @@
 import { useState , useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Edit3, Building2, Phone, Mail } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 import EditProfileModal from '@/components/profile/EditProfileModal';
-import OrganisationRegistrationModal from '@/components/organisation/OrganisationRegistrationModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -22,8 +22,8 @@ interface ProfileCardProps {
 const ProfileCard = ({ profile, onUpdateProfile }: ProfileCardProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
   const [userOrganisation, setUserOrganisation] = useState<any>(null);
 
   useEffect(() => {
@@ -51,12 +51,8 @@ const ProfileCard = ({ profile, onUpdateProfile }: ProfileCardProps) => {
     }
   };
 
-  const handleRegisterOrganisation = async (orgData: {
-    name: string;
-    description: string;
-  }) => {
-    setUserOrganisation(orgData);
-    setIsOrgModalOpen(false);
+  const handleRegisterOrganisation = () => {
+    navigate('/register-organization');
   };
 
   const getOrganisationStatusColor = (status: string) => {
@@ -122,7 +118,7 @@ const ProfileCard = ({ profile, onUpdateProfile }: ProfileCardProps) => {
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={() => setIsOrgModalOpen(true)}
+                    onClick={handleRegisterOrganisation}
                     className="w-full sm:w-auto"
                   >
                     <Building2 className="h-4 w-4 mr-2" />
@@ -153,12 +149,6 @@ const ProfileCard = ({ profile, onUpdateProfile }: ProfileCardProps) => {
           organisation: profile.organisation || null
         } : null}
         onUpdateProfile={onUpdateProfile}
-      />
-
-      <OrganisationRegistrationModal
-        isOpen={isOrgModalOpen}
-        onClose={() => setIsOrgModalOpen(false)}
-        onSuccess={handleRegisterOrganisation}
       />
     </>
   );

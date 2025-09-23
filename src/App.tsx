@@ -26,7 +26,7 @@ import Team from "./pages/Team";
 import JoinUs from "./pages/JoinUs";
 import RegisterOrganization from "./pages/RegisterOrganization";
 import Receipt from "./pages/Receipt";
-import CheckInDashboard from "./pages/dashboard/events/CheckInDashboard";
+import CheckInDashboard from "./pages/CheckInDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -131,14 +131,14 @@ const App = () => (
                       </ProtectedRoute>
                     }
                   />
-                  <Route
+                  {/* <Route
                     path="/create-post"
                     element={
                       <ProtectedRoute>
                         <CreatePost organisationId={""} />
                       </ProtectedRoute>
                     }
-                  />
+                  /> */}
 
                   {/* Registrations */}
                   <Route

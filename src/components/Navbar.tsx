@@ -145,30 +145,10 @@ const Navbar = () => {
 
                     <DropdownMenuSeparator />
 
-                    {userOrganisation && userOrganisation.status === 'approved' && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/organisation-dashboard" className="flex items-center">
-                          <Building2 className="mr-2 h-4 w-4" />
-                          <span>Organisation Dashboard</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-
-                    {isAdmin && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/admin-dashboard" className="flex items-center">
-                          <Shield className="mr-2 h-4 w-4" />
-                          <span>Admin Dashboard</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-
-                    <DropdownMenuSeparator />
-
                     <DropdownMenuItem asChild>
-                      <Link to="/register-organization" className="flex items-center">
-                        <Building2 className="mr-2 h-4 w-4" />
-                        <span>Register Organization</span>
+                      <Link to="/dashboard" className="flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Dashboard</span>
                       </Link>
                     </DropdownMenuItem>
 
@@ -218,11 +198,9 @@ const Navbar = () => {
                     <p className="text-lg font-medium">{user.user_metadata?.name || "User"}</p>
                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
 
-                    {userOrganisation && userOrganisation.status === 'approved' && (
-                      <Button asChild variant="outline" className="w-full mt-2">
-                        <Link to="/organisation-dashboard">Organisation Dashboard</Link>
-                      </Button>
-                    )}
+                    <Button asChild variant="outline" className="w-full mt-2">
+                      <Link to="/dashboard">Dashboard</Link>
+                    </Button>
 
                     <Button variant="outline" className="w-full" onClick={handleSignOut}>
                       Sign Out

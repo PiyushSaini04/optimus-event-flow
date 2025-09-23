@@ -112,3 +112,4 @@ BEGIN
     (SELECT COUNT(*)::BIGINT FROM public.post_comments WHERE post_id = post_id_param) AS comments_count;
 END;
 $$;
+

@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthContext';
 import * as XLSX from 'xlsx';
-import ShareAccessModal from '@/components/events/ShareAccessModal';
+import ShareAccessModal from '../components/ShareAccessModal';
 
 interface Registration {
   id: string;

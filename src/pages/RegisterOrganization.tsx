@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Building2, UserPlus, Link as LinkIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -184,13 +185,20 @@ const RegisterOrganization = () => {
   const handleJoinOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-
+  
     setLoading(true);
     try {
-      // Extract token from invite link
-      const url = new URL(joinData.inviteLink);
-      const token = url.searchParams.get('invite');
-
+      let token = joinData.inviteLink;
+  
+      // If the user pasted a full URL, extract the token param
+      try {
+        const url = new URL(joinData.inviteLink);
+        const tokenFromUrl = url.searchParams.get('invite');
+        if (tokenFromUrl) token = tokenFromUrl;
+      } catch {
+        // not a full URL, assume they pasted only the token
+      }
+  
       if (!token) {
         toast({
           title: "Invalid link",
@@ -199,15 +207,16 @@ const RegisterOrganization = () => {
         });
         return;
       }
-
-      const { data, error } = await supabase
-        .rpc('join_organization_by_token', {
-          invite_token: token,
-          joining_user_id: user.id
-        });
-
+  
+      // Call RPC to join organization
+      const { data, error } = await supabase.rpc('join_organization_by_token', {
+        p_token: token,
+        p_user_id: user.id
+      });
+      
+  
       if (error) throw error;
-
+  
       if (data.success) {
         toast({
           title: "Success!",
@@ -232,6 +241,7 @@ const RegisterOrganization = () => {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="min-h-screen pt-6">
@@ -252,6 +262,7 @@ const RegisterOrganization = () => {
                 <TabsTrigger value="join">Join Organization</TabsTrigger>
               </TabsList>
 
+              {/* CREATE ORGANIZATION */}
               <TabsContent value="create" className="space-y-6 mt-6">
                 <Alert>
                   <Building2 className="h-4 w-4" />
@@ -325,6 +336,7 @@ const RegisterOrganization = () => {
                 </form>
               </TabsContent>
 
+              {/* JOIN ORGANIZATION */}
               <TabsContent value="join" className="space-y-6 mt-6">
                 <Alert>
                   <UserPlus className="h-4 w-4" />
