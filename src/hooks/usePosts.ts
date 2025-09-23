@@ -1,35 +1,9 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
+import { Post } from '@/types';
 import { useAuth } from '@/components/AuthContext';
 
-interface Post {
-  id: string;
-  title: string;
-  description: string;
-  image_url: string | null;
-  created_at: string;
-  organisation_id: string;
-  organization: {
-    name: string;
-  };
-  likes_count: number;
-  comments_count: number;
-  user_liked: boolean;
-  comments: Comment[];
-}
-
-interface Comment {
-  id: string;
-  comment_text: string;
-  created_at: string;
-  user_id: string;
-  profiles: {
-    name: string;
-    photo: string | null;
-  };
-}
-
-export const usePosts = () => {
+export const usePosts = (organizationUuid?: string) => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,60 +11,48 @@ export const usePosts = () => {
   useEffect(() => {
     fetchPosts();
     setupRealtimeSubscription();
-  }, [user]);
+  }, [organizationUuid, user]);
 
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('posts')
         .select(`
-          id,
-          title,
-          description,
-          image_url,
-          created_at,
-          organisation_id,
-          organizations!inner(name)
-        `)
-        .order('created_at', { ascending: false });
+          *,
+          organizations:organisation_uuid(name),
+          profiles:author_id(name, avatar_url, is_staff, staff_name)
+        `);
+
+      if (organizationUuid) {
+        query = query.eq('organisation_uuid', organizationUuid);
+      }
+
+      const { data: postsData, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
       // Fetch engagement data for each post
       const postsWithEngagement = await Promise.all(
-        (data || []).map(async (post) => {
-          const [likesData, commentsData, userLikeData] = await Promise.all([
-            supabase
-              .from('post_likes')
-              .select('id')
-              .eq('post_id', post.id),
-            supabase
-              .from('post_comments')
-              .select(`
-                id,
-                comment_text,
-                created_at,
-                user_id,
-                profiles!inner(name, photo)
-              `)
-              .eq('post_id', post.id)
-              .order('created_at', { ascending: false }),
-            user ? supabase
-              .from('post_likes')
-              .select('id')
-              .eq('post_id', post.id)
-              .eq('user_id', user.id)
-              .single() : { data: null }
+        (postsData || []).map(async (post) => {
+          const [likesData, commentsData, sharesData, userLikeData, userShareData] = await Promise.all([
+            supabase.from('likes').select('id').eq('post_id', post.id),
+            supabase.from('comments').select('id').eq('post_id', post.id),
+            supabase.from('shares').select('id').eq('post_id', post.id),
+            user ? supabase.from('likes').select('id').eq('post_id', post.id).eq('user_id', user.id).single() : { data: null },
+            user ? supabase.from('shares').select('id').eq('post_id', post.id).eq('user_id', user.id).single() : { data: null }
           ]);
 
           return {
             ...post,
-            organization: Array.isArray(post.organizations) ? post.organizations[0] : post.organizations,
             likes_count: likesData.data?.length || 0,
             comments_count: commentsData.data?.length || 0,
+            shares_count: sharesData.data?.length || 0,
             user_liked: !!userLikeData.data,
-            comments: commentsData.data || []
+            user_shared: !!userShareData.data,
+            organization: Array.isArray(post.organizations) ? post.organizations[0] : post.organizations,
+            author: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles
           };
         })
       );
@@ -107,26 +69,11 @@ export const usePosts = () => {
   const setupRealtimeSubscription = () => {
     const subscription = supabase
       .channel('posts_realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'posts' },
-        () => fetchPosts()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'post_likes' },
-        () => fetchPosts()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'post_likes' },
-        () => fetchPosts()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'post_comments' },
-        () => fetchPosts()
-      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => fetchPosts())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'likes' }, () => fetchPosts())
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'likes' }, () => fetchPosts())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => fetchPosts())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shares' }, () => fetchPosts())
       .subscribe();
 
     return () => subscription.unsubscribe();
@@ -142,7 +89,7 @@ export const usePosts = () => {
       if (post.user_liked) {
         // Unlike
         const { error } = await supabase
-          .from('post_likes')
+          .from('likes')
           .delete()
           .eq('post_id', postId)
           .eq('user_id', user.id);
@@ -151,11 +98,8 @@ export const usePosts = () => {
       } else {
         // Like
         const { error } = await supabase
-          .from('post_likes')
-          .insert({
-            post_id: postId,
-            user_id: user.id
-          });
+          .from('likes')
+          .insert({ post_id: postId, user_id: user.id });
 
         if (error) throw error;
       }
@@ -176,17 +120,58 @@ export const usePosts = () => {
     }
   };
 
-  const addComment = async (postId: string, commentText: string) => {
+  const sharePost = async (postId: string) => {
     if (!user) throw new Error('User not authenticated');
-    if (!commentText.trim()) return;
+
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    try {
+      if (post.user_shared) {
+        // Unshare
+        const { error } = await supabase
+          .from('shares')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        // Share
+        const { error } = await supabase
+          .from('shares')
+          .insert({ post_id: postId, user_id: user.id });
+
+        if (error) throw error;
+      }
+
+      // Update local state immediately
+      setPosts(prev => prev.map(p => 
+        p.id === postId 
+          ? { 
+              ...p, 
+              user_shared: !p.user_shared, 
+              shares_count: p.user_shared ? p.shares_count - 1 : p.shares_count + 1 
+            }
+          : p
+      ));
+    } catch (error) {
+      console.error('Error toggling share:', error);
+      throw error;
+    }
+  };
+
+  const addComment = async (postId: string, text: string) => {
+    if (!user) throw new Error('User not authenticated');
+    if (!text.trim()) return;
 
     try {
       const { error } = await supabase
-        .from('post_comments')
+        .from('comments')
         .insert({
           post_id: postId,
           user_id: user.id,
-          comment_text: commentText.trim()
+          text: text.trim()
         });
 
       if (error) throw error;
@@ -199,11 +184,36 @@ export const usePosts = () => {
     }
   };
 
+  const createPost = async (content: string, imageUrl?: string, organisationUuid?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    if (!organisationUuid) throw new Error('Organization UUID required');
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .insert({
+          content: content.trim(),
+          image_url: imageUrl,
+          author_id: user.id,
+          organisation_uuid: organisationUuid
+        });
+
+      if (error) throw error;
+
+      await fetchPosts();
+    } catch (error) {
+      console.error('Error creating post:', error);
+      throw error;
+    }
+  };
+
   return {
     posts,
     loading,
     likePost,
+    sharePost,
     addComment,
+    createPost,
     refetch: fetchPosts
   };
 };

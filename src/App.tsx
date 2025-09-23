@@ -24,7 +24,7 @@ import Posts from "./pages/Posts";
 import Gallery from "./pages/Gallery";
 import Team from "./pages/Team";
 import JoinUs from "./pages/JoinUs";
-import RegisterOrganization from "./pages/RegisterOrganization";
+import OrganizationRegister from "./pages/OrganizationRegister";
 import Receipt from "./pages/Receipt";
 import CheckInDashboard from "./pages/CheckInDashboard";
 import NotFound from "./pages/NotFound";
@@ -109,7 +109,7 @@ const App = () => (
                     path="/register-organization"
                     element={
                       <ProtectedRoute>
-                        <RegisterOrganization />
+                        <OrganizationRegister />
                       </ProtectedRoute>
                     }
                   />
