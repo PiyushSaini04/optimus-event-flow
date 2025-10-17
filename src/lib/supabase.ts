@@ -21,22 +21,19 @@ export const supabaseHelpers = {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select(`
-        *,
-        organizations:organisation_uuid(name, uuid, status)
-      `)
+      .select('*')
       .eq('user_id', user.id)
       .single();
 
     return profile;
   },
 
-  // Get organization by UUID
-  async getOrganizationByUuid(uuid: string) {
+  // Get organization by ID
+  async getOrganizationById(id: string) {
     const { data, error } = await supabase
       .from('organizations')
       .select('*')
-      .eq('uuid', uuid)
+      .eq('id', id)
       .single();
 
     return { data, error };
@@ -73,10 +70,10 @@ export const supabaseHelpers = {
 
     if (orgError) return { error: orgError };
 
-    // Update user's profile with organization UUID
+    // Update user's profile with organization ID
     const { error: profileError } = await supabase
       .from('profiles')
-      .update({ organisation_uuid: org.uuid })
+      .update({ organisation_uuid: org.id })
       .eq('user_id', user.id);
 
     return { data: org, error: profileError };

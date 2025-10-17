@@ -9,7 +9,6 @@ export interface User {
 }
 
 export interface Profile {
-  id: string;
   user_id: string;
   name: string;
   role: 'user' | 'organiser' | 'admin';
@@ -20,7 +19,7 @@ export interface Profile {
   location?: string;
   avatar_url?: string;
   photo?: string;
-  organisation?: string;
+  email?: string;
   created_at: string;
   updated_at: string;
 }
@@ -29,7 +28,7 @@ export interface Organization {
   id: string;
   name: string;
   description?: string;
-  uuid: string;
+  owner_id?: string;
   avatar_url?: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
@@ -84,7 +83,7 @@ export interface Post {
   content: string;
   image_url?: string;
   author_id: string;
-  organisation_uuid: string;
+  organisation_id: string;
   created_at: string;
   organization?: { name: string };
   author?: { name: string; avatar_url?: string; is_staff: boolean; staff_name?: string };

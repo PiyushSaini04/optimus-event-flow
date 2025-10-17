@@ -20,6 +20,7 @@ import CreateEvent from "./pages/CreateEvent";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import OrganisationDashboard from "./pages/OrganisationDashboard";
+import OrganizationRegister from "./pages/OrganizationRegister";
 import Posts from "./pages/Posts";
 import Gallery from "./pages/Gallery";
 import Team from "./pages/Team";

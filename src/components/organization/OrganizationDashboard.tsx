@@ -15,16 +15,16 @@ import CreatePostModal from '@/components/posts/CreatePostModal';
 const OrganizationDashboard = () => {
   const { toast } = useToast();
   const { organization, profile } = useOrganization();
-  const { posts, likePost, sharePost, addComment, refetch: refetchPosts } = usePosts(organization?.uuid);
+  const { posts, likePost, sharePost, addComment, refetch: refetchPosts } = usePosts(organization?.id);
   
   const [copied, setCopied] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
 
   const copyAccessKey = async () => {
-    if (!organization?.uuid) return;
+    if (!organization?.id) return;
 
     try {
-      await navigator.clipboard.writeText(organization.uuid);
+      await navigator.clipboard.writeText(organization.id);
       setCopied(true);
       toast({
         title: "Access Key Copied!",
@@ -87,7 +87,7 @@ const OrganizationDashboard = () => {
             <Label>Organization Access Key</Label>
             <div className="flex gap-2">
               <Input
-                value={organization.uuid}
+                value={organization.id}
                 readOnly
                 className="font-mono text-sm"
               />
@@ -167,7 +167,7 @@ const OrganizationDashboard = () => {
       <CreatePostModal
         isOpen={showCreatePost}
         onClose={() => setShowCreatePost(false)}
-        organizationUuid={organization.uuid}
+        organizationUuid={organization.id}
         onPostCreated={refetchPosts}
       />
     </div>

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import PostCard from '@/components/posts/PostCard';
@@ -33,7 +34,7 @@ const Posts = () => {
     try {
       const { data, error } = await supabase
         .from('organizations')
-        .select('id, name, uuid')
+        .select('id, name')
         .eq('status', 'approved')
         .order('name');
 
@@ -73,7 +74,7 @@ const Posts = () => {
       post.organization?.name.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesOrg = selectedOrganization === 'all' || 
-      post.organisation_uuid === selectedOrganization;
+      post.organisation_id === selectedOrganization;
 
     return matchesSearch && matchesOrg;
   });

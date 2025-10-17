@@ -21,12 +21,12 @@ export const usePosts = (organizationUuid?: string) => {
         .from('posts')
         .select(`
           *,
-          organizations:organisation_uuid(name),
+          organizations:organisation_id(name),
           profiles:author_id(name, avatar_url, is_staff, staff_name)
         `);
 
       if (organizationUuid) {
-        query = query.eq('organisation_uuid', organizationUuid);
+        query = query.eq('organisation_id', organizationUuid);
       }
 
       const { data: postsData, error } = await query.order('created_at', { ascending: false });
@@ -184,9 +184,9 @@ export const usePosts = (organizationUuid?: string) => {
     }
   };
 
-  const createPost = async (content: string, imageUrl?: string, organisationUuid?: string) => {
+  const createPost = async (content: string, imageUrl?: string, organisationId?: string) => {
     if (!user) throw new Error('User not authenticated');
-    if (!organisationUuid) throw new Error('Organization UUID required');
+    if (!organisationId) throw new Error('Organization ID required');
 
     try {
       const { error } = await supabase
@@ -195,7 +195,7 @@ export const usePosts = (organizationUuid?: string) => {
           content: content.trim(),
           image_url: imageUrl,
           author_id: user.id,
-          organisation_uuid: organisationUuid
+          organisation_id: organisationId
         });
 
       if (error) throw error;

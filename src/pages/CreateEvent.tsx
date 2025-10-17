@@ -12,7 +12,6 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthContext";
-import OrganisationRegistrationModal from "@/components/organisation/OrganisationRegistrationModal";
 import { useLocation, useParams } from "react-router-dom";
 
 interface Organization {
@@ -56,7 +55,6 @@ const CreateEvent = () => {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loadingOrg, setLoadingOrg] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [showOrgModal, setShowOrgModal] = useState(false);
 
   // Event form data
   const [eventData, setEventData] = useState({
@@ -342,8 +340,11 @@ const CreateEvent = () => {
             </Alert>
 
             <div className="text-center">
+              <p className="text-muted-foreground mb-4">
+                You need to register an organisation before creating events.
+              </p>
               <Button 
-                onClick={() => setShowOrgModal(true)}
+                onClick={() => navigate("/register-organization")}
                 className="btn-hero"
               >
                 <Building2 className="h-4 w-4 mr-2" />
@@ -351,15 +352,6 @@ const CreateEvent = () => {
               </Button>
             </div>
           </motion.div>
-
-          <OrganisationRegistrationModal
-            isOpen={showOrgModal}
-            onClose={() => setShowOrgModal(false)}
-            onSuccess={(org) => {
-              setOrganization(org);
-              setShowOrgModal(false);
-            }}
-          />
         </div>
       </div>
     );

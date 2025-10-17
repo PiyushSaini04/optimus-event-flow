@@ -21,15 +21,33 @@ export const useOrganization = () => {
   const fetchUserOrganization = async () => {
     try {
       setLoading(true);
-      const userProfile = await supabaseHelpers.getCurrentUserProfile();
+      
+      // Fetch user profile
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (profileError) throw profileError;
       
       if (userProfile) {
-        setProfile(userProfile);
-        if (userProfile.organisations) {
-          setOrganization(userProfile.organisations as Organization);
+        setProfile(userProfile as Profile);
+        
+        // If user has an organization, fetch it
+        if (userProfile.organisation_uuid) {
+          const { data: org, error: orgError } = await supabase
+            .from('organizations')
+            .select('*')
+            .eq('id', userProfile.organisation_uuid)
+            .single();
+          
+          if (!orgError && org) {
+            setOrganization(org as Organization);
+          }
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching organization:', err);
       setError('Failed to load organization data');
     } finally {

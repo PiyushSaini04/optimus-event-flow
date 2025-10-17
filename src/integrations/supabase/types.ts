@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      comments: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       digital_tickets: {
         Row: {
           created_at: string
@@ -98,17 +130,12 @@ export type Database = {
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "event_dashboard_access_granted_by_fkey"
-            columns: ["granted_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       event_registrations: {
         Row: {
+          checked_in: boolean | null
+          checked_in_at: string | null
           created_at: string | null
           custom_answers: Json | null
           email: string
@@ -116,11 +143,19 @@ export type Database = {
           id: string
           mobile_number: string | null
           name: string
+          payment_id: string | null
+          payment_order_id: string | null
+          payment_provider: string | null
+          payment_signature: string | null
+          payment_status: string | null
           phone: string | null
           registration_number: string | null
+          ticket_code: string | null
           user_id: string | null
         }
         Insert: {
+          checked_in?: boolean | null
+          checked_in_at?: string | null
           created_at?: string | null
           custom_answers?: Json | null
           email: string
@@ -128,11 +163,19 @@ export type Database = {
           id?: string
           mobile_number?: string | null
           name: string
+          payment_id?: string | null
+          payment_order_id?: string | null
+          payment_provider?: string | null
+          payment_signature?: string | null
+          payment_status?: string | null
           phone?: string | null
           registration_number?: string | null
+          ticket_code?: string | null
           user_id?: string | null
         }
         Update: {
+          checked_in?: boolean | null
+          checked_in_at?: string | null
           created_at?: string | null
           custom_answers?: Json | null
           email?: string
@@ -140,13 +183,51 @@ export type Database = {
           id?: string
           mobile_number?: string | null
           name?: string
+          payment_id?: string | null
+          payment_order_id?: string | null
+          payment_provider?: string | null
+          payment_signature?: string | null
+          payment_status?: string | null
           phone?: string | null
           registration_number?: string | null
+          ticket_code?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "event_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_responses: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          responses: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          responses?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          responses?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_responses_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
@@ -164,9 +245,11 @@ export type Database = {
           created_by: string | null
           description: string
           end_date: string
+          form_schema: Json | null
           id: string
           location: string
           max_participants: number
+          organisation_uuid: string | null
           organization_id: string | null
           organizer_name: string
           questions: Json | null
@@ -185,9 +268,11 @@ export type Database = {
           created_by?: string | null
           description: string
           end_date: string
+          form_schema?: Json | null
           id?: string
           location: string
           max_participants: number
+          organisation_uuid?: string | null
           organization_id?: string | null
           organizer_name: string
           questions?: Json | null
@@ -206,9 +291,11 @@ export type Database = {
           created_by?: string | null
           description?: string
           end_date?: string
+          form_schema?: Json | null
           id?: string
           location?: string
           max_participants?: number
+          organisation_uuid?: string | null
           organization_id?: string | null
           organizer_name?: string
           questions?: Json | null
@@ -224,6 +311,35 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
         ]
@@ -288,27 +404,59 @@ export type Database = {
         }
         Relationships: []
       }
+      organisation_invites: {
+        Row: {
+          created_at: string | null
+          id: string
+          organisation_id: string | null
+          token: string
+          used: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          organisation_id?: string | null
+          token: string
+          used?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          organisation_id?: string | null
+          token?: string
+          used?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organisation_invites_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           id: string
-          joined_at: string
-          organisation_id: string
-          role: string
-          user_id: string
+          joined_at: string | null
+          organisation_id: string | null
+          role: string | null
+          user_id: string | null
         }
         Insert: {
           id?: string
-          joined_at?: string
-          organisation_id: string
-          role: string
-          user_id: string
+          joined_at?: string | null
+          organisation_id?: string | null
+          role?: string | null
+          user_id?: string | null
         }
         Update: {
           id?: string
-          joined_at?: string
-          organisation_id?: string
-          role?: string
-          user_id?: string
+          joined_at?: string | null
+          organisation_id?: string | null
+          role?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -316,13 +464,6 @@ export type Database = {
             columns: ["organisation_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -333,7 +474,6 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
-          invite_token: string | null
           name: string
           owner_id: string | null
           status: string | null
@@ -343,7 +483,6 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
-          invite_token?: string | null
           name: string
           owner_id?: string | null
           status?: string | null
@@ -353,98 +492,47 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
-          invite_token?: string | null
           name?: string
           owner_id?: string | null
           status?: string | null
         }
         Relationships: []
       }
-      post_interactions: {
-        Row: {
-          content: string | null
-          created_at: string | null
-          id: string
-          post_id: string
-          type: string
-          user_id: string
-        }
-        Insert: {
-          content?: string | null
-          created_at?: string | null
-          id?: string
-          post_id: string
-          type: string
-          user_id: string
-        }
-        Update: {
-          content?: string | null
-          created_at?: string | null
-          id?: string
-          post_id?: string
-          type?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "post_interactions_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "post_interactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       posts: {
         Row: {
           author_id: string
           content: string
+          created_at: string | null
           created_by: string | null
+          description: string | null
           id: string
           image_url: string | null
           organisation_id: string
-          title: string
+          organisation_uuid: string | null
         }
         Insert: {
           author_id: string
           content: string
+          created_at?: string | null
           created_by?: string | null
+          description?: string | null
           id?: string
           image_url?: string | null
           organisation_id: string
-          title: string
+          organisation_uuid?: string | null
         }
         Update: {
           author_id?: string
           content?: string
+          created_at?: string | null
           created_by?: string | null
+          description?: string | null
           id?: string
           image_url?: string | null
           organisation_id?: string
-          title?: string
+          organisation_uuid?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "posts_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "posts_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "posts_organisation_id_fkey"
             columns: ["organisation_id"]
@@ -456,79 +544,155 @@ export type Database = {
       }
       profiles: {
         Row: {
-          created_at: string
-          id: string
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          is_staff: boolean | null
           location: string | null
-          name: string
+          name: string | null
+          organisation_uuid: string | null
           phone_number: string | null
-          role: string
-          updated_at: string
+          photo: string | null
+          role: string | null
+          staff_name: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
-          id?: string
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          is_staff?: boolean | null
           location?: string | null
-          name: string
+          name?: string | null
+          organisation_uuid?: string | null
           phone_number?: string | null
-          role?: string
-          updated_at?: string
+          photo?: string | null
+          role?: string | null
+          staff_name?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
-          id?: string
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          is_staff?: boolean | null
           location?: string | null
-          name?: string
+          name?: string | null
+          organisation_uuid?: string | null
           phone_number?: string | null
-          role?: string
-          updated_at?: string
+          photo?: string | null
+          role?: string | null
+          staff_name?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
+      }
+      registrations: {
+        Row: {
+          checked_in: boolean | null
+          checked_in_at: string | null
+          created_at: string | null
+          email: string
+          event_id: string
+          id: string
+          name: string
+          phone: string | null
+          ticket_code: string | null
+          user_id: string | null
+        }
+        Insert: {
+          checked_in?: boolean | null
+          checked_in_at?: string | null
+          created_at?: string | null
+          email: string
+          event_id: string
+          id?: string
+          name: string
+          phone?: string | null
+          ticket_code?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          checked_in?: boolean | null
+          checked_in_at?: string | null
+          created_at?: string | null
+          email?: string
+          event_id?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          ticket_code?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shares: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shares_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      approve_member: {
-        Args: {
-          approver_user_id: string
-          member_user_id: string
-          org_id: string
-        }
+      approve_organisation: {
+        Args: { org_id: string }
+        Returns: Json
+      }
+      check_in_attendee: {
+        Args: { ticket_code_param: string }
         Returns: Json
       }
       generate_org_invite_token: {
-        Args: {
-          org_id: string
-        }
+        Args: { org_id: string }
         Returns: string
       }
-      get_organization_members: {
-        Args: {
-          org_id: string
-        }
-        Returns: {
-          id: string
-          joined_at: string
-          role: string
-          user_avatar: string
-          user_email: string
-          user_id: string
-          user_name: string
-        }[]
+      get_organization_by_name: {
+        Args: { org_name: string }
+        Returns: Json
       }
       is_organiser: {
         Args: { uid: string }
         Returns: boolean
       }
       join_organization_by_token: {
-        Args: {
-          invite_token: string
-          joining_user_id: string
-        }
+        Args: { p_token: string; p_user_id: string }
         Returns: Json
       }
     }

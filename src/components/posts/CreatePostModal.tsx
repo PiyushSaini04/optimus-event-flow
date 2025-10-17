@@ -84,7 +84,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
           content: content.trim(),
           image_url: imageUrl,
           author_id: user.id,
-          organisation_uuid: organizationUuid
+          organisation_id: organizationUuid
         });
 
       if (error) throw error;
