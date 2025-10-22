@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, User, LogOut, Shield, Building2, Plus } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
-import { useAuth } from "./AuthContext";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/components/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
