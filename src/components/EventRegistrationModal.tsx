@@ -74,11 +74,18 @@ const EventRegistrationModal = ({ isOpen, onClose, eventId, eventTitle, eventPri
   //   // ... existing code ...
   // };
 
-  const createRegistration = async (razorpayPaymentDetails?: {
-    razorpay_order_id: string;
-    razorpay_payment_id: string;
-    razorpay_signature: string;
-  }) => {
+  /**
+   * Creates a registration record in the database
+   * If payment details are provided, updates the existing registration with payment info
+   */
+  const createRegistration = async (
+    razorpayPaymentDetails?: {
+      razorpay_order_id: string;
+      razorpay_payment_id: string;
+      razorpay_signature: string;
+    },
+    orderId?: string
+  ) => {
     try {
       // Check if user is already registered for this event
       if (user) {
@@ -103,18 +110,27 @@ const EventRegistrationModal = ({ isOpen, onClose, eventId, eventTitle, eventPri
       const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       const qrCodeData = ticketNumber;
 
+      // Prepare registration data
+      const registrationData: any = {
+        event_id: eventId,
+        user_id: user?.id || null,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || null,
+        custom_answers: formData.customAnswers,
+        ticket_code: ticketNumber,
+      };
+
+      // Add payment details if this is a paid registration
+      if (orderId) {
+        registrationData.payment_order_id = orderId;
+        registrationData.payment_status = 'pending';
+        registrationData.payment_provider = 'razorpay';
+      }
+
       const { data: registration, error } = await supabase
         .from("event_registrations")
-        .insert({
-          event_id: eventId,
-          user_id: user?.id || null,
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone || null,
-          custom_answers: formData.customAnswers,
-          ticket_code: ticketNumber,
-        })
-
+        .insert(registrationData)
         .select()
         .single();
 
@@ -191,58 +207,129 @@ const EventRegistrationModal = ({ isOpen, onClose, eventId, eventTitle, eventPri
     }
   };
 
+  /**
+   * Handles form submission and payment processing
+   * For paid events: Creates Razorpay order and opens payment modal
+   * For free events: Directly creates registration
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (eventPrice > 0) {
-        // Razorpay integration
+        // Step 1: Create registration with pending payment status
+        const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        
+        // Step 2: Call backend to create Razorpay order
+        console.log("Creating Razorpay order for amount:", eventPrice);
         const { data, error } = await supabase.functions.invoke('create-order', {
-          body: { amount: eventPrice * 100 }, // Amount in paisa
+          body: { 
+            amount: eventPrice * 100, // Convert to paise (smallest unit)
+            receipt: ticketNumber
+          },
         });
 
-        if (error) throw error;
-        const { order_id, currency, amount } = data;
+        if (error) {
+          console.error("Error creating order:", error);
+          throw error;
+        }
 
+        const { order_id, currency, amount } = data;
+        console.log("Order created successfully:", order_id);
+
+        // Step 3: First create the registration record with order_id
+        await createRegistration(undefined, order_id);
+
+        // Step 4: Configure Razorpay checkout options
         const options: RazorpayOptions = {
-          key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Your Razorpay Key ID
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID || "", // Public Razorpay Key ID from env
           amount: amount.toString(),
           currency: currency,
           name: "Event Registration",
           description: `Registration for ${eventTitle}`,
           order_id: order_id,
+          // Handler called after successful payment
           handler: async (response: any) => {
-            // Verify payment on backend
-            const { data: verificationData, error: verificationError } = await supabase.functions.invoke('verify-payment', {
-              body: {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                formData: formData,
-              },
-            });
-
-            if (verificationError) throw verificationError;
-
-            if (verificationData.verified) {
-              toast({
-                title: "Payment Successful!",
-                description: "Your payment has been successfully processed.",
+            console.log("Payment successful, verifying...", response);
+            try {
+              setLoading(true);
+              
+              // Step 5: Verify payment signature on backend
+              const { data: verificationData, error: verificationError } = await supabase.functions.invoke('verify-payment', {
+                body: {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                },
               });
-              await createRegistration({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              });
-            } else {
+
+              if (verificationError) {
+                console.error("Verification error:", verificationError);
+                throw verificationError;
+              }
+
+              // Step 6: Check verification result
+              if (verificationData.verified) {
+                console.log("Payment verified successfully");
+                toast({
+                  title: "Payment Successful!",
+                  description: "Your payment has been verified and registration is complete.",
+                });
+
+                // Navigate to receipt page with payment details
+                const params = new URLSearchParams({
+                  name: formData.name,
+                  email: formData.email,
+                  phone: formData.phone,
+                  amount: (amount / 100).toString(), // Convert back to rupees
+                  orderId: response.razorpay_order_id,
+                  paymentId: response.razorpay_payment_id,
+                  date: new Date().toISOString(),
+                }).toString();
+                
+                onClose();
+                navigate(`/receipt?${params}`);
+
+                // Send email receipt (async, don't wait for it)
+                supabase.functions.invoke('send-email-receipt', {
+                  body: {
+                    to: formData.email,
+                    subject: `Receipt for ${eventTitle} Registration`,
+                    templateData: {
+                      name: formData.name,
+                      email: formData.email,
+                      phone: formData.phone,
+                      amount: (amount / 100).toString(),
+                      orderId: response.razorpay_order_id,
+                      paymentId: response.razorpay_payment_id,
+                      date: new Date().toLocaleString(),
+                      eventTitle,
+                    },
+                  },
+                }).catch(err => console.error("Error sending receipt email:", err));
+
+              } else {
+                // Payment verification failed
+                console.error("Payment verification failed");
+                toast({
+                  title: "Payment Verification Failed",
+                  description: "There was an issue verifying your payment. Please contact support.",
+                  variant: "destructive",
+                });
+              }
+            } catch (error) {
+              console.error("Error in payment handler:", error);
               toast({
-                title: "Payment Verification Failed",
-                description: "There was an issue verifying your payment. Please contact support.",
+                title: "Error",
+                description: "An error occurred while processing your payment. Please contact support.",
                 variant: "destructive",
               });
+            } finally {
+              setLoading(false);
             }
           },
+          // Prefill user details in payment form
           prefill: {
             name: formData.name,
             email: formData.email,
@@ -256,17 +343,23 @@ const EventRegistrationModal = ({ isOpen, onClose, eventId, eventTitle, eventPri
           },
         };
 
+        // Step 7: Initialize and open Razorpay checkout
         const rzp1 = new window.Razorpay(options);
-        rzp1.on('payment.failed', function (response: any){
+        
+        // Handle payment failure
+        rzp1.on('payment.failed', function (response: any) {
+          console.error("Payment failed:", response.error);
           toast({
             title: "Payment Failed",
-            description: response.error.description,
+            description: response.error.description || "Payment could not be processed.",
             variant: "destructive",
           });
-          console.error("Razorpay Error:", response.error);
-          setLoading(false); // Reset loading on failure
+          setLoading(false);
         });
+        
+        // Open payment modal
         rzp1.open();
+        setLoading(false); // Reset loading as payment modal is now open
 
 
       } else {
