@@ -24,30 +24,44 @@ const ProfileCard = ({ profile, onUpdateProfile }: ProfileCardProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [userOrganisation, setUserOrganisation] = useState<any>(null);
+  const [userOrganisation, setUserOrganisation] = useState<any>(undefined); // Change to undefined for initial loading state
 
+  // Run the fetch when the 'profile' prop changes
   useEffect(() => {
-    fetchUserOrganisation();
-  }, [user]);
+    if (profile) { // Ensure profile data is available
+      fetchUserOrganisation();
+    }
+  }, [profile]); // Dependency on profile
 
   const fetchUserOrganisation = async () => {
-    if (!user) return;
-    
+    // 1. Check if the profile object exists and has an organization UUID
+    if (!profile || !profile.organisation) {
+      setUserOrganisation(null); // Explicitly set to null if no organization is linked in the profile
+      return;
+    }
+
+    const organizationId = profile.organisation;
+
     try {
+      // 2. Fetch the organization using the UUID from the profile table
       const { data, error } = await supabase
         .from('organizations')
         .select('*')
-        .eq('owner_id', user.id)
+        .eq('id', organizationId) // Changed from owner_id to organization ID
         .single();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching organisation:', error);
+        setUserOrganisation(null); // Fallback if there's a different error
         return;
       }
+      
+      // If the organization is found, data will have the details. If not found, data is null.
+      setUserOrganisation(data); 
 
-      setUserOrganisation(data);
     } catch (error) {
       console.error('Error in fetchUserOrganisation:', error);
+      setUserOrganisation(null);
     }
   };
 
@@ -67,6 +81,15 @@ const ProfileCard = ({ profile, onUpdateProfile }: ProfileCardProps) => {
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+
+  // Use a loading state until the check is complete
+  if (userOrganisation === undefined) {
+    return (
+      <Card className="mb-8">
+        <CardContent className="p-6">Loading organization status...</CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -95,12 +118,7 @@ const ProfileCard = ({ profile, onUpdateProfile }: ProfileCardProps) => {
                     <span>{profile.phone_number}</span>
                   </div>
                 )}
-                {profile?.organisation && (
-                  <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground">
-                    <Building2 className="h-4 w-4" />
-                    <span>{profile.organisation}</span>
-                  </div>
-                )}
+                {/* Removed the redundant profile.organisation display here */}
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
@@ -114,6 +132,7 @@ const ProfileCard = ({ profile, onUpdateProfile }: ProfileCardProps) => {
                   Edit Profile
                 </Button>
                 
+                {/* The logic now relies solely on the userOrganisation state */}
                 {!userOrganisation ? (
                   <Button
                     variant="default"
@@ -146,7 +165,7 @@ const ProfileCard = ({ profile, onUpdateProfile }: ProfileCardProps) => {
           name: profile.name, 
           avatar_url: profile.photo || null,
           phone_number: profile.phone_number || null,
-          organisation: profile.organisation || null
+          organisation: profile.organisation || null // ensure the UUID is passed if available
         } : null}
         onUpdateProfile={onUpdateProfile}
       />
